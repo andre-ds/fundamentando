@@ -9,15 +9,6 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 
-# Exemplo de definição de schedule 
-# .---------------- minuto (0 - 59)
-# |  .------------- hora (0 - 23)
-# |  |  .---------- dia do mês (1 - 31)
-# |  |  |  .------- mês (1 - 12) 
-# |  |  |  |  .---- dia da semana (0 - 6) (Domingo=0 or 7)
-# |  |  |  |  |
-# *  *  *  *  * (nome do usuário que vai executar o comando)
-
 DIR_PATH = os.path.dirname(os.path.realpath('__file__'))
 years_list = [*range(2011, 2023, 1)]
 
@@ -49,29 +40,6 @@ def _path_environment(ti):
     DIR_PATH_RAW = os.path.join(PATH_DATALAKE, 'raw')
     ti.xcom_push(key='DIR_PATH_RAW', value=DIR_PATH_RAW)
 
-'''
-def _extraction_raw(dataType:str, years_list:list):
-    
-    todaystr = re.sub('-', '_', str((date.today())))
-    DIR_PATH_RAW = os.path.join(os.path.join(DIR_PATH, 'datalake'), 'raw')
-    repository_registration = 'http://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv'
-    repository_DFP = 'http://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/'
-    repository_ITR = 'http://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/'
-
-    if 'registration' in dataType:
-            urllib.request.urlretrieve(repository_registration, os.path.join(DIR_PATH_RAW, 'extracted_{todaystr}_cad_cia_aberta.csv'))
-
-    for year in years_list:
-        # Year (yearly)
-        if 'dfp' in dataType:
-            urllib.request.urlretrieve(repository_DFP+f'dfp_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW, f'extracted_{todaystr}_dfp_cia_aberta_{year}.zip'))
-        # Quarter (quarterly) 
-        if 'itr' in dataType:
-            try:
-                urllib.request.urlretrieve(repository_ITR+f'itr_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW, f'extracted_{todaystr}_itr_cia_aberta_{year}.zip'))
-            except:
-                print('error')
-'''
 
 def _load_bucket(bucket, DIR_PATH):
 
