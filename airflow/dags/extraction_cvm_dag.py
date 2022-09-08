@@ -5,12 +5,15 @@ import urllib.request
 from datetime import datetime, date, timedelta
 from airflow import DAG
 from groups.group_extractions_cvm import extraction_cvm_itr, extraction_cvm_dfp
+from utils.Utils import unzippded_files
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from pyspark.sql import SparkSession
 
 
 DIR_PATH = os.path.dirname(os.path.realpath('__file__'))
 years_list = [*range(2011, 2023, 1)]
+
 
 
 def _path_environment(ti):
@@ -28,14 +31,8 @@ def _path_environment(ti):
         os.mkdir(os.path.join(PATH_DATALAKE, 'raw'))
     if 'pre-processed' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed'))
-    if 'zipfiles' not in list_folders:
-        os.mkdir(os.path.join(PATH_DATALAKE, 'zipfiles'))
-    if 'unzippedfiles' not in list_folders:
-        os.mkdir(os.path.join(PATH_DATALAKE, 'unzippedfiles'))
     if 'analytical' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'analytical'))
-    if 'auxiliary' not in list_folders:
-        os.mkdir(os.path.join(PATH_DATALAKE, 'auxiliary'))
         
     DIR_PATH_RAW = os.path.join(PATH_DATALAKE, 'raw')
     ti.xcom_push(key='DIR_PATH_RAW', value=DIR_PATH_RAW)
@@ -49,7 +46,7 @@ def _load_bucket(bucket, DIR_PATH):
     for file in files_foder:
         hook.load_file(filename=os.path.join(DIR_PATH_RAW, f'{file}'), bucket_name=bucket, key=f'{file}')
 
-# '*/50 * * * *'
+
 with DAG(
     dag_id='extraction_cvm',
     start_date=datetime(2022, 8, 9),
@@ -75,4 +72,12 @@ with DAG(
         }
     )
 
-environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3
+    unzip_dfp = PythonOperator(
+        task_id='unzip_raw_dfp',
+        python_callable=unzippded_files,
+        op_kwargs={
+            'dataType': 'dfp',
+        }
+    )
+
+environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_dfp
