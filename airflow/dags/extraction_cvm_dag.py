@@ -8,7 +8,6 @@ from groups.group_extractions_cvm import extraction_cvm_itr, extraction_cvm_dfp
 from utils.Utils import unzippded_files
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from pyspark.sql import SparkSession
 
 
 DIR_PATH = os.path.dirname(os.path.realpath('__file__'))
