@@ -61,7 +61,7 @@ schema_dre = StructType([
     StructField('ST_CONTA_FIXA', StringType(), True)
 ])
 
-itr_bp_ba = StructType([
+schema_bp_ba = StructType([
     StructField('CNPJ_CIA', StringType(), True),
     StructField('DT_REFER', StringType(), True),
     StructField('VERSAO', IntegerType(), True),

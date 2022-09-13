@@ -3,7 +3,7 @@ from distutils.log import error
 from datetime import datetime, date, timedelta
 from airflow import DAG
 from groups.group_extractions_cvm import extraction_cvm_itr, extraction_cvm_dfp
-from groups.group_pre_processing_cvm import pre_processing_cvm_dfp_dre
+from groups.group_pre_processing_cvm import pp_cvm_dfp_dre, pp_cvm_itr_dre
 from utils.Utils import unzippded_files, load_bucket
 from airflow.operators.python import PythonOperator
 
@@ -51,7 +51,7 @@ with DAG(
     )
 
     ext_cvm_dfp = extraction_cvm_dfp()
-    #ext_cvm_itr = extraction_cvm_itr()
+    ext_cvm_itr = extraction_cvm_itr()
 
     upload_s3 = PythonOperator(
         task_id='upload_s3_raw',
@@ -62,17 +62,18 @@ with DAG(
         }
     )
 
-    unzip_dfp = PythonOperator(
-        task_id='unzip_raw_dfp',
+    unzip_cvm = PythonOperator(
+        task_id='unzip_cvm_raw',
         python_callable=unzippded_files,
         op_kwargs={
-            'dataType': 'dfp',
+            'dataType': ['itr', 'dfp'],
         }
     )
 
-    pp_cvm_dfp_dre = pre_processing_cvm_dfp_dre()
+    pp_cvm_dfp_dre = pp_cvm_dfp_dre()
+    pp_cvm_itr_dre = pp_cvm_itr_dre()
     
 
 #environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_dfp
-environment >> [ext_cvm_dfp] >> upload_s3 >> unzip_dfp >> pp_cvm_dfp_dre
+environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_cvm >> [pp_cvm_dfp_dre, pp_cvm_itr_dre]
 #environment >> [ext_cvm_dfp] >> unzip_dfp >> pp_cvm_dfp

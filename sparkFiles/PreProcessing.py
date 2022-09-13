@@ -33,7 +33,7 @@ class PreProcessing():
         return dataset
 
 
-    def _union_quarters(self, dataset_itr, dataset_dfp):
+    def _union_quarters(self, dataset_itr:DataFrame, dataset_dfp:DataFrame) -> DataFrame:
 
         # Agregations Q1, Q2 and Q3
         df_sum = dataset_itr.groupBy(['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
@@ -81,16 +81,7 @@ class PreProcessing():
 
     def _pre_processing_itr_dre(self, dataset:DataFrame) -> DataFrame:
     
-        dre_account = {
-            '3.01':'sales_revenue',
-            '3.02':'cost_goods_and_services',
-            '3.03':'groos_revenue',
-            '3.04':'operating_revenues_and_expenses',
-            '3.05':'earnings_before_interest_and_taxes',
-            '3.06':'financial_results',
-            '3.07':'earnings_before_income_tax_and_social_contribution',
-            '3.11':'net_profit'
-        }
+        from sparkDocuments import dre_account
 
         # Pre-processing
         for var in dataset.columns:
@@ -125,7 +116,7 @@ class PreProcessing():
 
     def _pre_processing_itr_bpp(self, dataset:DataFrame) -> DataFrame:
         
-        from sparkFiles.sparkDocuments import bpp_account
+        from sparkDocuments import bpp_account
 
         # Pre-processing
         for var in dataset.columns:
@@ -157,7 +148,7 @@ class PreProcessing():
 
     def _pre_processing_itr_bpa(self, dataset:DataFrame) -> DataFrame:
 
-        from sparkFiles.sparkDocuments import bpa_account
+        from sparkDocuments import bpa_account
 
         # Pre-processing
         for var in dataset.columns:
@@ -189,7 +180,7 @@ class PreProcessing():
 
     def _pre_processing_dfp_dre(self, dataset:DataFrame) -> DataFrame:
 
-        from sparkFiles.sparkDocuments import dre_account
+        from sparkDocuments import dre_account
 
         # Pre-processing
         for var in dataset.columns:
@@ -224,7 +215,7 @@ class PreProcessing():
 
     def pre_process_cvm(self, dataType:str, schema:StructField, year:str):
         
-        from sparkFiles.sparkDocuments import types_dict, DIR_PATH_RAW, DIR_PATH_PROCESSED
+        from sparkDocuments import types_dict, DIR_PATH_RAW, DIR_PATH_PROCESSED
  
 
         list_files = [file for file in os.listdir(DIR_PATH_RAW) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
