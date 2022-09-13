@@ -1,28 +1,51 @@
 # Base Image
-FROM continuumio/anaconda3
+FROM ubuntu:latest
 MAINTAINER Andre
 
 
 # Arguments Airflow
 ARG AIRFLOW_HOME=/opt/airflow
 ARG AIRFLOW_VERSION=2.3.3
-# Arguments Aconda
-ARG ANACONDA_VERSION=Anaconda3-2022.05-Linux-x86_64.sh
+# Arguments Java
+ARG JAVA_VERSION=11.0.16
+# Spark
+ARG SPARK_VERSION=spark-3.3.0
+ARG SPARK_FILE=spark-3.3.0-bin-hadoop3
+# Pytho
+ARG PYTHON_VERSION=python3.9
 
 # Export the environment
 ENV AIRFLOW_HOME=${AIRFLOW_HOME}
 
-# Install Anaconda
-RUN /opt/conda/bin/conda update -n base -c defaults conda \
-    && /opt/conda/bin/conda install -c conda-forge openjdk \
-    && conda install -c conda-forge pyspark
+# Install Dependencies
+RUN apt update \
+    && apt install curl -yqq \
+    && apt install nano -yqq \
+    && apt install wget -yqq \
+    && apt install python3 -yqq \
+    && apt install pip -yqq \
+    && pip install pytz
+
+# Install Java
+RUN apt update \
+    && apt install default-jdk -yqq
+
+# Install Pyspark
+RUN mkdir -p /opt/spark
+RUN wget https://dlcdn.apache.org/spark/${SPARK_VERSION}/${SPARK_FILE}.tgz
+RUN tar -xvf /${SPARK_FILE}.tgz -C /opt/spark/
+# Export the environment
+ENV SPARK_HOME=/opt/spark/${SPARK_FILE}
+ENV PATH=$PATH:$SPARK_HOME/bin
+ENV PYTHONPATH=$SPARK_HOME/python:$PYTHONPATH
+ENV PYSPARK_PYTHON=python3
+ENV PATH=$PATH:$JAVA_HOME/jre/bin
+
+ENV HADOOP_CONF_DIR=/opt/spark/${SPARK_FILE}/etc/hadoop/
+ENV YARN_CONF_DIR=/opt/spark/${SPARK_FILE}/etc/hadoop/
 
 # Install apache airflow with subpackages
-RUN set -ex \
-    && pip install apache-airflow[aws]==${AIRFLOW_VERSION}
-
-# Copy the airflow.cfg from host to container
-#COPY ./airflow.cfg /opt/airflow/airflow.cfg
+RUN pip install apache-airflow[aws,spark]==${AIRFLOW_VERSION}
 
 # Expose ports (just to indicate that this container needs to map port)
 EXPOSE 8080
