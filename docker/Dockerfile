@@ -23,8 +23,11 @@ RUN apt update \
     && apt install nano -yqq \
     && apt install wget -yqq \
     && apt install python3 -yqq \
-    && apt install pip -yqq \
-    && pip install pytz
+    && apt install pip -yqq
+
+# Set timezone:
+ENV TZ=America/Sao_Paulo
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install Java
 RUN apt update \

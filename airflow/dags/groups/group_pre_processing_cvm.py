@@ -4,7 +4,6 @@ from airflow.utils.task_group import TaskGroup
 from airflow.operators.bash_operator import BashOperator
 
 # Environment
-#years_list = [2020, 2021]
 years_list = dc.years_list
 
 def pre_processing_cvm_dfp_dre():

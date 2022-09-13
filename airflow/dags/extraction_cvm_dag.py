@@ -4,10 +4,9 @@ from datetime import datetime, date, timedelta
 from airflow import DAG
 from groups.group_extractions_cvm import extraction_cvm_itr, extraction_cvm_dfp
 from groups.group_pre_processing_cvm import pre_processing_cvm_dfp_dre
-from utils.Utils import unzippded_files
+from utils.Utils import unzippded_files, load_bucket
 import utils.documents as dc
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 
 # Environment
@@ -39,16 +38,6 @@ def _path_environment(ti):
     ti.xcom_push(key='DIR_PATH_PROCESSED', value=DIR_PATH_PROCESSED)
 
 
-def _load_bucket(bucket, DIR_PATH):
-
-    hook = S3Hook('s3_conn')
-    DIR_PATH_RAW = os.path.join(os.path.join(DIR_PATH, 'datalake'), 'raw')
-    files_foder = [file for file in os.listdir(DIR_PATH_RAW) if (file.endswith('.zip'))]
-    for file in files_foder:
-        hook.load_file(filename=os.path.join(DIR_PATH_RAW, f'{file}'), bucket_name=bucket, key=f'{file}')
-
-
-
 with DAG(
     dag_id='extraction_cvm',
     start_date=datetime(2022, 8, 9),
@@ -67,7 +56,7 @@ with DAG(
 
     upload_s3 = PythonOperator(
         task_id='upload_s3_raw',
-        python_callable=_load_bucket,
+        python_callable=load_bucket,
         op_kwargs={
             'bucket':'deepfi-raw',
             'DIR_PATH': DIR_PATH
