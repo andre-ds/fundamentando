@@ -4,11 +4,10 @@ from pyspark.context import SparkContext
 from pyspark.conf import SparkConf
 from pyspark.sql import SparkSession
 from PreProcessing import PreProcessing
-import documents as dc
-
+from sparkDocuments import schema_dre
 
 if __name__ == "__main__":
-
+  
     parser = argparse.ArgumentParser(
         description="Spark Pre-processing"
     )
@@ -21,5 +20,6 @@ if __name__ == "__main__":
         .getOrCreate())
         
     pp = PreProcessing(spark_environment=sk)
-    pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=dc.schema_dre)
+    if args.dataType == 'itr_dre':
+        pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre)
     

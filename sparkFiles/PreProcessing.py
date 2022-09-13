@@ -8,12 +8,9 @@ from pyspark.sql.functions import col, quarter, to_date, month, year, when, to_d
 
 class PreProcessing():
 
+
     def __init__(self, spark_environment):
         self.spark_environment = spark_environment
-
-    PATH_DATALAKE = '/datalake'
-    DIR_PATH_RAW = os.path.join(PATH_DATALAKE, 'raw')
-    DIR_PATH_PROCESSED = os.path.join(PATH_DATALAKE, 'pre-processed')
 
 
     def remove_missing_values(self, dataset:DataFrame) -> DataFrame:
@@ -128,7 +125,7 @@ class PreProcessing():
 
     def _pre_processing_itr_bpp(self, dataset:DataFrame) -> DataFrame:
         
-        from documents import bpp_account
+        from sparkFiles.sparkDocuments import bpp_account
 
         # Pre-processing
         for var in dataset.columns:
@@ -160,7 +157,7 @@ class PreProcessing():
 
     def _pre_processing_itr_bpa(self, dataset:DataFrame) -> DataFrame:
 
-        from documents import bpa_account
+        from sparkFiles.sparkDocuments import bpa_account
 
         # Pre-processing
         for var in dataset.columns:
@@ -192,7 +189,7 @@ class PreProcessing():
 
     def _pre_processing_dfp_dre(self, dataset:DataFrame) -> DataFrame:
 
-        from documents import dre_account
+        from sparkFiles.sparkDocuments import dre_account
 
         # Pre-processing
         for var in dataset.columns:
@@ -226,19 +223,15 @@ class PreProcessing():
 
 
     def pre_process_cvm(self, dataType:str, schema:StructField, year:str):
+        
+        from sparkFiles.sparkDocuments import types_dict, DIR_PATH_RAW, DIR_PATH_PROCESSED
  
-        types_dict = {
-            'itr_dre':'itr_cia_aberta_DRE_con',
-            'itr_bpp':'itr_cia_aberta_BPP_con',
-            'itr_bpa':'itr_cia_aberta_BPA_con',
-            'dfp_dre':'dfp_cia_aberta_DRE_con'
-        }
 
-        list_files = [file for file in os.listdir(self.DIR_PATH_RAW) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
+        list_files = [file for file in os.listdir(DIR_PATH_RAW) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
         for file in list_files:
             if year == file[-8:-4]:
                 # Oppen Datasets
-                dataset = self.spark_environment.read.csv(os.path.join(self.DIR_PATH_RAW, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                 if dataType == 'itr_dre':
                     dataset = self._pre_processing_itr_dre(dataset = dataset)
                 elif dataType == 'itr_bpp':
@@ -249,7 +242,7 @@ class PreProcessing():
                     dataset = self._pre_processing_dfp_dre(dataset = dataset)
                 # Saving
                 saveFilename = f'pp_{dataType}_{file[-8:-4]}.parquet'
-                dataset.write.format('parquet').mode('overwrite').save(os.path.join(self.DIR_PATH_PROCESSED, saveFilename))
+                dataset.write.format('parquet').mode('overwrite').save(os.path.join(DIR_PATH_PROCESSED, saveFilename))
 
 
 

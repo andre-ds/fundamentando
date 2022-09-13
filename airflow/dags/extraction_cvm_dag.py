@@ -5,7 +5,6 @@ from airflow import DAG
 from groups.group_extractions_cvm import extraction_cvm_itr, extraction_cvm_dfp
 from groups.group_pre_processing_cvm import pre_processing_cvm_dfp_dre
 from utils.Utils import unzippded_files, load_bucket
-import utils.documents as dc
 from airflow.operators.python import PythonOperator
 
 

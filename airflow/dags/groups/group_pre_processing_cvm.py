@@ -1,13 +1,12 @@
 import os
-import utils.documents as dc
+from utils.documents import years_list
 from airflow.utils.task_group import TaskGroup
 from airflow.operators.bash_operator import BashOperator
 
-# Environment
-years_list = dc.years_list
 
 def pre_processing_cvm_dfp_dre():
 
+    
     with TaskGroup('pre_processing_cvm_dfp', tooltip='pre processing cvm dfp') as group:
 
         for year in years_list:
