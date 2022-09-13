@@ -1,18 +1,17 @@
-from distutils.log import error
 import os
-import re
-import urllib.request
+from distutils.log import error
 from datetime import datetime, date, timedelta
 from airflow import DAG
 from groups.group_extractions_cvm import extraction_cvm_itr, extraction_cvm_dfp
+from groups.group_pre_processing_cvm import pre_processing_cvm_dfp_dre
 from utils.Utils import unzippded_files
+import utils.documents as dc
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 
+# Environment
 DIR_PATH = os.path.dirname(os.path.realpath('__file__'))
-years_list = [*range(2011, 2023, 1)]
-
 
 
 def _path_environment(ti):
@@ -34,16 +33,20 @@ def _path_environment(ti):
         os.mkdir(os.path.join(PATH_DATALAKE, 'analytical'))
         
     DIR_PATH_RAW = os.path.join(PATH_DATALAKE, 'raw')
+    DIR_PATH_PROCESSED = os.path.join(PATH_DATALAKE, 'pre-processed')
+    ti.xcom_push(key='DIR_PATH', value=DIR_PATH)
     ti.xcom_push(key='DIR_PATH_RAW', value=DIR_PATH_RAW)
+    ti.xcom_push(key='DIR_PATH_PROCESSED', value=DIR_PATH_PROCESSED)
 
 
 def _load_bucket(bucket, DIR_PATH):
 
     hook = S3Hook('s3_conn')
     DIR_PATH_RAW = os.path.join(os.path.join(DIR_PATH, 'datalake'), 'raw')
-    files_foder = [file for file in os.listdir(DIR_PATH_RAW)]
+    files_foder = [file for file in os.listdir(DIR_PATH_RAW) if (file.endswith('.zip'))]
     for file in files_foder:
         hook.load_file(filename=os.path.join(DIR_PATH_RAW, f'{file}'), bucket_name=bucket, key=f'{file}')
+
 
 
 with DAG(
@@ -60,7 +63,7 @@ with DAG(
     )
 
     ext_cvm_dfp = extraction_cvm_dfp()
-    ext_cvm_itr = extraction_cvm_itr()
+    #ext_cvm_itr = extraction_cvm_itr()
 
     upload_s3 = PythonOperator(
         task_id='upload_s3_raw',
@@ -79,4 +82,9 @@ with DAG(
         }
     )
 
-environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_dfp
+    pp_cvm_dfp_dre = pre_processing_cvm_dfp_dre()
+    
+
+#environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_dfp
+environment >> [ext_cvm_dfp] >> upload_s3 >> unzip_dfp >> pp_cvm_dfp_dre
+#environment >> [ext_cvm_dfp] >> unzip_dfp >> pp_cvm_dfp
