@@ -13,23 +13,22 @@ years_list = dc.years_list
 
 def _extraction_cvm(ti, dataType:str, year:int):
     
+    import utils.documents as dc
+
      # Date
     todaystr = re.sub('-', '_', str((date.today())))
     # Local Path
     DIR_PATH_RAW = ti.xcom_pull(key='DIR_PATH_RAW', task_ids='path_environment')
 
-    repository_registration = 'http://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv'
-    repository_DFP = 'http://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/'
-    repository_ITR = 'http://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/'
     if 'registration' in dataType:
-            urllib.request.urlretrieve(repository_registration, os.path.join(DIR_PATH_RAW, 'extracted_{todaystr}_cad_cia_aberta.csv'))
+            urllib.request.urlretrieve(dc.repository_registration, os.path.join(DIR_PATH_RAW, 'extracted_{todaystr}_cad_cia_aberta.csv'))
     # Year (yearly)
     if 'dfp' in dataType:
-        urllib.request.urlretrieve(repository_DFP+f'dfp_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW, f'extracted_{todaystr}_dfp_cia_aberta_{year}.zip'))
+        urllib.request.urlretrieve(dc.repository_DFP+f'dfp_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW, f'extracted_{todaystr}_dfp_cia_aberta_{year}.zip'))
     # Quarter (quarterly) 
     if 'itr' in dataType:
         try:
-           urllib.request.urlretrieve(repository_ITR+f'itr_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW, f'extracted_{todaystr}_itr_cia_aberta_{year}.zip'))
+           urllib.request.urlretrieve(dc.repository_ITR+f'itr_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW, f'extracted_{todaystr}_itr_cia_aberta_{year}.zip'))
         except:
             print(f'The file itr_cia_aberta_{year}.zip is not avaliable.')
 
