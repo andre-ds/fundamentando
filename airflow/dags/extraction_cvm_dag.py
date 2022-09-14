@@ -3,7 +3,7 @@ from distutils.log import error
 from datetime import datetime, date, timedelta
 from airflow import DAG
 from groups.group_extractions_cvm import extraction_cvm_itr, extraction_cvm_dfp
-from groups.group_pre_processing_cvm import pp_cvm_dfp_dre, pp_cvm_itr_dre
+from groups.group_pre_processing_cvm import pp_cvm_dfp_dre, pp_cvm_itr_dre, pp_cvm_itr_bpp, pp_cvm_itr_bpa
 from utils.Utils import unzippded_files, load_bucket
 from airflow.operators.python import PythonOperator
 
@@ -72,8 +72,11 @@ with DAG(
 
     pp_cvm_dfp_dre = pp_cvm_dfp_dre()
     pp_cvm_itr_dre = pp_cvm_itr_dre()
+    pp_cvm_itr_bpp = pp_cvm_itr_bpp()
+    pp_cvm_itr_bpa = pp_cvm_itr_bpa()
     
 
 #environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_dfp
-environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_cvm >> [pp_cvm_dfp_dre, pp_cvm_itr_dre]
+environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_cvm >> pp_cvm_dfp_dre
+environment >> [ext_cvm_dfp, ext_cvm_itr] >> upload_s3 >> unzip_cvm >> pp_cvm_itr_dre >> [pp_cvm_itr_bpp, pp_cvm_itr_bpa] 
 #environment >> [ext_cvm_dfp] >> unzip_dfp >> pp_cvm_dfp
