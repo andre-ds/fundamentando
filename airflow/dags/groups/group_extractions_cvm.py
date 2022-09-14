@@ -33,32 +33,19 @@ def _extraction_cvm(ti, dataType:str, year:int):
             print(f'The file itr_cia_aberta_{year}.zip is not avaliable.')
 
 
-def extraction_cvm_itr():
+def extraction_cvm(dataType):
 
-    with TaskGroup('extraction_cvm_itr', tooltip='extraction cvm itr') as group:
+    with TaskGroup('extraction_cvm', tooltip='extraction cvm') as group:
 
         for year in years_list:
             ex_itr_group = PythonOperator(
                 task_id=f'ext_raw_itr_{year}',
                 python_callable=_extraction_cvm,
-                op_kwargs = {'dataType':'itr', 'year':year}
+                op_kwargs = {'dataType':dataType, 'year':year}
             )
 
         return group
 
-def extraction_cvm_dfp():
-
-    with TaskGroup('extraction_cvm_dfp', tooltip='extraction cvm dfp') as group:
-
-        for year in years_list:
-            ex_dfp_group = PythonOperator(
-                task_id=f'ext_raw_dfp_{year}',
-                python_callable=_extraction_cvm,
-                op_kwargs = {'dataType':'dfp', 'year':year}
-            )
-
-        
-        return group
 
 
 

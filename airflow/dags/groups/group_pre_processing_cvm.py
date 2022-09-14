@@ -4,61 +4,34 @@ from airflow.utils.task_group import TaskGroup
 from airflow.operators.bash_operator import BashOperator
 
 
-def pp_cvm_dfp_dre():
+def __taskgroup_ids(dataType):
+    if dataType == 'dfp_dre':
+        group_id = 'pre_processing_cvm_dfp_dre'
+        tooltip  = 'pre processing cvm dfp dre'
+    elif dataType == 'itr_dre':
+        group_id = 'pre_processing_cvm_itr_dre'
+        tooltip  = 'pre processing cvm itr dre'
+    elif dataType == 'itr_bpp':
+        group_id = 'pre_processing_cvm_itr_bpp'
+        tooltip  = 'pre processing cvm itr bpp'
+    elif dataType == 'itr_bpa':
+        group_id = 'pre_processing_cvm_itr_bpa'
+        tooltip  = 'pre processing cvm itr bpa'
 
-    
-    with TaskGroup('pre_processing_cvm_dfp_dre', tooltip='Pre-processing cvm DRE dfp') as group:
-
-        for year in years_list:
-            FILE_PATH = 'spark-submit /opt/sparkFiles/pre_processing_cvm.py --dataType "dfp_dre" --years_list {year}'
-            pp_dfp_dre_group = BashOperator(
-                task_id=f'pp_dfp_dre_id_{year}',
-                bash_command=FILE_PATH.format(year=year)
-            )
-
-        return group
-
-
-def pp_cvm_itr_dre():
-
-    
-    with TaskGroup('pre_processing_cvm_itr_dre', tooltip='Pre-processing cvm DRE itr') as group:
-
-        for year in years_list:
-            FILE_PATH = 'spark-submit /opt/sparkFiles/pre_processing_cvm.py --dataType "itr_dre" --years_list {year}'
-            pp_itr_dre_group = BashOperator(
-                task_id=f'pp_itr_dre_id_{year}',
-                bash_command=FILE_PATH.format(year=year)
-            )
-
-        return group
+    return group_id, tooltip
 
 
-def pp_cvm_itr_bpp():
+def pre_processing_cvm(dataType):
 
-    
-    with TaskGroup('pre_processing_cvm_itr_bpp', tooltip='Pre-processing cvm BPP itr') as group:
+    group_id, tooltip = __taskgroup_ids(dataType=dataType)
+
+    with TaskGroup(group_id=group_id, tooltip=tooltip) as group:
 
         for year in years_list:
-            FILE_PATH = 'spark-submit /opt/sparkFiles/pre_processing_cvm.py --dataType "itr_bpp" --years_list {year}'
-            pp_itr_dre_group = BashOperator(
-                task_id=f'pp_itr_bpp_id_{year}',
-                bash_command=FILE_PATH.format(year=year)
-            )
-
-        return group
-
-
-def pp_cvm_itr_bpa():
-
-    
-    with TaskGroup('pre_processing_cvm_itr_bpa', tooltip='Pre-processing cvm BPA itr') as group:
-
-        for year in years_list:
-            FILE_PATH = 'spark-submit /opt/sparkFiles/pre_processing_cvm.py --dataType "itr_bpa" --years_list {year}'
-            pp_itr_dre_group = BashOperator(
-                task_id=f'pp_itr_bpa_id_{year}',
-                bash_command=FILE_PATH.format(year=year)
+            FILE_PATH = 'spark-submit /opt/sparkFiles/pre_processing_cvm.py --dataType "{dataType}" --years_list {year}'
+            pre_processing_cvm = BashOperator(
+                task_id=f'pre_processing_cvm_{dataType}_{year}',
+                bash_command=FILE_PATH.format(dataType=dataType, year=year)
             )
 
         return group
