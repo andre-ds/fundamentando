@@ -81,6 +81,10 @@ A nomenclatura das variáveis são construídas com base na seguinte taxonomia:
 
 <font size="3">**Nomenclatura Variáveis = tipo_tema**</font>
 
+Exemplo:
+
+*id_cnpj* - id indica que é um atributo de identificação cujo tema é o CNPJ da empresa. 
+
 Onde: 
 
 Taxonomia | Descrição 
@@ -102,10 +106,6 @@ is | Representa uma variável binária 1 (True) ou 0 (False).
 
 **Tema**
 Nomenclatura que indica o que de fato é o dado.
-
-Exemplo:
-
-*id_cnpj* - id indica que é um atributo de identificação cujo tema é o CNPJ da empresa. 
 
 
 ## Camada analytical
