@@ -21,8 +21,8 @@ A primeira etapa consiste na extração dos dados de empresas disponíveis na CV
 Exemplo:
 
 **extracted_2022_09_15_dfp_cia_aberta_2021.zip**
-Onde: 
 
+Onde: 
 
 Taxonomia | Descrição 
 ------|------
