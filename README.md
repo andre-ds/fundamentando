@@ -10,48 +10,72 @@ Os códigos têm a finalidade de realizar o provisionamento da infraestrutura ne
 ![Pipeline de Dados](./application-flow.png)
 
 
-## **Camada raw** 
+## **Camada raw**
 
-A primeira etapa consiste na extração dos dados de empresas disponíveis na CVM e persistência deles na camada **Raw** do datalake na AWS. Essa camada armazena o dado da forma mais bruta, ou seja, o dado é extraido e armazenado sem ser feito nenhum tipo de alteração.
+A primeira etapa consiste na extração dos dados de empresas disponíveis na CVM e persistência deles na camada **Raw** do datalake na AWS. Essa camada armazena o dado da forma mais bruta, ou seja, o dado é extraido e armazenado sem ser feito nenhum tipo de alteração, inclusive de formato, mantendo-se assim o formato original (zip).
+
+### Taxonomia da Nomenclatura dos Arquivos Persistidos
+
+<font size="3">**Nomenclatura Arquivos = extracted_data_extracao_tipo.formato**</font>
+
+Exemplo:
+
+**extracted_2022_09_15_dfp_cia_aberta_2021.zip**
+Onde: 
+
+
+Taxonomia | Descrição 
+------|------
+Data de Extração | Data pela qual o arquivo foi extraído.
+Tipo | Trata-se do nome do arquivo que foi disponibilizado.
 
 
 ## **Camada pre_processed**
 
+Na segunda etapa, os dados são pré-processados e armazenados na camada **pre_processed** do datalake em formato parquet. 
+
 ### Taxonomia da Nomenclatura dos Arquivos Persistidos
 
-Na segunda etapa, os dados são pré-processados e armazenados na camada **pre_processed** do datalake. 
+<font size="3">**Nomenclatura Arquivos = pp_data_extracao_tipo_ano.parquet**</font>
 
-<font size="3">**Nomenclatura Arquivos = pp_periodo_tipo**</font>
+Exemplo:
+
+**pp_2022_09_15_dfp_dre_2022.parquet**
 
 Onde: 
 
 Taxonomia | Descrição 
 ------|------
 pp | Indica que os arquivos são pré-processados.
-Período | Indica a janelam temporal da variável.
+Data de Extração | Data pela qual o arquivo foi extraído.
 Tipo | Diz respeito ao tipo do documento disponibilizado pela CVM.
+Período | Indica a janela temporal da base de dados.
 
-**Período**
-Abreviação | Descrição 
-------|------
-ITR | Formulário de Informações Trimestrais
 
 **Tipo**
+
+O tipo é indica, inicialmente, se é DFP ou ITR e o tipo da demonstração financeira.
+
 Abreviação | Descrição 
 ------|------
-DRE | Demonstração de Resultado
-BPA | Balanço Patrimonial Ativo
-BPP | Balanço Patrimonial Passivo
-DVA | Demonstração de Valor Adicionado
-DRA | Demonstração de Resultado Abrangente
-DMPL | Demonstração das Mutações do Patrimônio Líquido
-DFC_MD | Demonstração de Fluxo de Caixa - Método Direto
-DFC_MI | Demonstração de Fluxo de Caixa - Método Indireto
+DPF | Formulário de Demonstrações Financeiras Padronizadas.
+ITR | Formulário de Informações Trimestrais.
+
+Abreviação | Descrição 
+------|------
+DRE | Demonstração de Resultado.
+BPA | Balanço Patrimonial Ativo.
+BPP | Balanço Patrimonial Passivo.
+DVA | Demonstração de Valor Adicionado.
+DRA | Demonstração de Resultado Abrangente.
+DMPL | Demonstração das Mutações do Patrimônio Líquido.
+DFC_MD | Demonstração de Fluxo de Caixa - Método Direto.
+DFC_MI | Demonstração de Fluxo de Caixa - Método Indireto.
 
 
 ### Taxonomia da Nomenclatura das Variáveis
 
-Nesta etapa os atributos relevantes são selecionados, renomeados (com base nas regras de taxonomia) e transformados.
+Além disso, nesta etapa os atributos relevantes são selecionados, renomeados (com base nas regras de taxonomia) e transformados.
 
 A nomenclatura das variáveis são construídas com base na seguinte taxonomia:
 
@@ -78,6 +102,10 @@ is | Representa uma variável binária 1 (True) ou 0 (False).
 
 **Tema**
 Nomenclatura que indica o que de fato é o dado.
+
+Exemplo:
+
+*id_cnpj* - id indica que é um atributo de identificação cujo tema é o CNPJ da empresa. 
 
 
 ## Camada analytical
@@ -126,25 +154,6 @@ Abreviação | Descrição
 1q | Indica uma janela de 1 (n) trimestre.
 1s | Indica uma janela de 1 (n) semestre.
 1s | Indica uma janela de 1 (n) ano.
-
-
-# Estrutura da Aplicação
-
-### Utils
-
-- extraction_cvm
-- unzippded_files
-- saving_raw_data
-- load_bucket
-
-
-### PreProcessing
-
-- _pre_processing_itr_dre
-- _pre_processing_itr_bpp
-- _pre_processing_itr_bpa
-- pre_process_itr_dre
-
 
 
 ## Dicionário de Dados Brutos CVM
