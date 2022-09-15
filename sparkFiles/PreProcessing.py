@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import date
 from pyspark.sql import DataFrame
 from pyspark.sql.types import IntegerType
 from pyspark.sql.types import StructField, StructType, DateType, DoubleType, StringType, IntegerType, FloatType
@@ -10,7 +11,13 @@ class PreProcessing():
 
 
     def __init__(self, spark_environment):
+        self._run()
         self.spark_environment = spark_environment
+
+
+    def _run(self):
+
+        self.todaystr = re.sub('-', '_', str((date.today())))
 
 
     def remove_missing_values(self, dataset:DataFrame) -> DataFrame:
@@ -232,8 +239,11 @@ class PreProcessing():
                 elif dataType == 'dfp_dre':
                     dataset = self._pre_processing_dfp_dre(dataset = dataset)
                 # Saving
-                saveFilename = f'pp_{dataType}_{file[-8:-4]}.parquet'
-                dataset.write.format('parquet').mode('overwrite').save(os.path.join(DIR_PATH_PROCESSED, saveFilename))
+                saveFilename = f'pp_{self.todaystr}_{dataType}_{file[-8:-4]}.parquet'
+                dataset.write.format('parquet') \
+                    .mode('overwrite') \
+                    .partitionBy('id_cvm') \
+                    .save(os.path.join(DIR_PATH_PROCESSED, saveFilename))
 
 
 
