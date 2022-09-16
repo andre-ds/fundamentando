@@ -10,7 +10,9 @@ types_dict = {
             'itr_dre':'itr_cia_aberta_DRE_con',
             'itr_bpp':'itr_cia_aberta_BPP_con',
             'itr_bpa':'itr_cia_aberta_BPA_con',
-            'dfp_dre':'dfp_cia_aberta_DRE_con'
+            'dfp_dre':'dfp_cia_aberta_DRE_con',
+            'dfp_bpp':'itr_cia_aberta_BPP_con',
+            'dfp_bpa':'dfp_cia_aberta_BPA_con'
         }
 
 

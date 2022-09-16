@@ -22,6 +22,10 @@ if __name__ == "__main__":
     pp = PreProcessing(spark_environment=sk)
     if args.dataType == 'dfp_dre':
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre)
+    elif args.dataType == 'dfp_bpp':
+        pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_bp_ba)
+    elif args.dataType == 'dfp_bpa':
+        pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_bp_ba)
     elif args.dataType == 'itr_dre':
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre)
     elif args.dataType == 'itr_bpp':

@@ -8,6 +8,12 @@ def __taskgroup_ids(dataType):
     if dataType == 'dfp_dre':
         group_id = 'pre_processing_cvm_dfp_dre'
         tooltip  = 'pre processing cvm dfp dre'
+    elif dataType == 'dfp_bpp':
+        group_id = 'pre_processing_cvm_dfp_bpp'
+        tooltip  = 'pre processing cvm dfp bpp'
+    elif dataType == 'dfp_bpa':
+        group_id = 'pre_processing_cvm_dfp_bpa'
+        tooltip  = 'pre processing cvm dfp bpa'
     elif dataType == 'itr_dre':
         group_id = 'pre_processing_cvm_itr_dre'
         tooltip  = 'pre processing cvm itr dre'

@@ -220,6 +220,70 @@ class PreProcessing():
         return dataset
 
 
+    def _pre_processing_dfp_bpa(self, dataset:DataFrame) -> DataFrame:
+
+        from sparkDocuments import bpa_account
+
+        # Pre-processing
+        for var in dataset.columns:
+            dataset = dataset.withColumnRenamed(var, var.lower())
+        # Keeping las registers
+        dataset = dataset.filter(col('ordem_exerc') == 'ÚLTIMO')
+        ## Getting year and quarter
+        for v in ['dt_refer', 'dt_fim_exerc']:
+            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
+        dataset = dataset.withColumn('dt_year', year('dt_refer'))
+        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
+        ## Standarting escala_moeda
+        dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
+        ## Keeping only relevants cd_conta
+        listKey = list(bpa_account.keys())
+        dataset = dataset.filter(col('cd_conta').isin(listKey))
+        for k in listKey:
+            dataset = dataset.withColumn('cd_conta', regexp_replace('cd_conta', '^' + k + '$', bpa_account.get(k)))
+        # Pivot dataset
+        varlist = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_year', 'dt_quarter']
+        dataset = dataset.groupBy(varlist).pivot('cd_conta').max('vl_conta').na.fill(0)
+        # Rename all variables to upercase
+        variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
+        for v in variablesRename:
+            dataset = dataset.withColumnRenamed(v[0], v[1])
+
+        return dataset
+
+
+    def _pre_processing_dfp_bpp(self, dataset:DataFrame) -> DataFrame:
+
+        from sparkDocuments import bpp_account
+
+        # Pre-processing
+        for var in dataset.columns:
+            dataset = dataset.withColumnRenamed(var, var.lower())
+        # Keeping las registers
+        dataset = dataset.filter(col('ordem_exerc') == 'ÚLTIMO')
+        ## Getting year and quarter
+        for v in ['dt_refer', 'dt_fim_exerc']:
+            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
+        dataset = dataset.withColumn('dt_year', year('dt_refer'))
+        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
+        ## Standarting escala_moeda
+        dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
+        ## Keeping only relevants cd_conta
+        listKey = list(bpp_account.keys())
+        dataset = dataset.filter(col('cd_conta').isin(listKey))
+        for k in listKey:
+            dataset = dataset.withColumn('cd_conta', regexp_replace('cd_conta', '^' + k + '$', bpp_account.get(k)))
+        # Pivot dataset
+        varlist = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_year', 'dt_quarter']
+        dataset = dataset.groupBy(varlist).pivot('cd_conta').max('vl_conta').na.fill(0)
+        # Rename all variables to upercase
+        variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
+        for v in variablesRename:
+            dataset = dataset.withColumnRenamed(v[0], v[1])
+
+        return dataset
+
+
     def pre_process_cvm(self, dataType:str, schema:StructField, year:str):
         
         from sparkDocuments import types_dict, DIR_PATH_RAW, DIR_PATH_PROCESSED
@@ -238,6 +302,10 @@ class PreProcessing():
                     dataset = self._pre_processing_itr_bpa(dataset = dataset)
                 elif dataType == 'dfp_dre':
                     dataset = self._pre_processing_dfp_dre(dataset = dataset)
+                elif dataType == 'dfp_bpp':
+                    dataset = self._pre_processing_dfp_bpp(dataset = dataset)
+                elif dataType == 'dfp_bpa':
+                    dataset = self._pre_processing_dfp_bpa(dataset = dataset)
                 # Saving
                 saveFilename = f'pp_{self.todaystr}_{dataType}_{file[-8:-4]}.parquet'
                 dataset.write.format('parquet') \
