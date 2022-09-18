@@ -1,0 +1,36 @@
+# Base Image
+FROM continuumio/anaconda3
+MAINTAINER Andre
+
+
+# Arguments Airflow
+ARG AIRFLOW_HOME=/opt/airflow
+ARG AIRFLOW_VERSION=2.3.3
+# Arguments Aconda
+ARG ANACONDA_VERSION=Anaconda3-2022.05-Linux-x86_64.sh
+
+# Export the environment
+ENV AIRFLOW_HOME=${AIRFLOW_HOME}
+
+# Install Anaconda
+RUN /opt/conda/bin/conda update -n base -c defaults conda \
+    && /opt/conda/bin/conda install -c conda-forge openjdk \
+    && conda install -c conda-forge pyspark
+
+# Install apache airflow with subpackages
+RUN set -ex \
+    && pip install apache-airflow[aws,spark]==${AIRFLOW_VERSION}
+
+# Copy the airflow.cfg from host to container
+#COPY ./airflow.cfg /opt/airflow/airflow.cfg
+
+# Expose ports (just to indicate that this container needs to map port)
+EXPOSE 8080
+
+VOLUME ["/datalake/"]
+
+# Execute CMD
+RUN echo "airflow db init" >> ~/.bashrc \
+    && echo '''airflow users create --role Admin --username airflow --password airflow --email airflow@airflow.com --firstname airflow --lastname airflow''' >> ~/.bashrc \
+    && echo  "airflow scheduler &> /dev/null &"  >> ~/.bashrc \
+    && echo  "airflow webserver &> /dev/null &"  >> ~/.bashrc
