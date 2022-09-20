@@ -43,37 +43,19 @@ ENV PATH=$PATH:$SPARK_HOME/bin
 ENV PYTHONPATH=$SPARK_HOME/python:$PYTHONPATH
 ENV PYSPARK_PYTHON=python3
 ENV PATH=$PATH:$JAVA_HOME/jre/bin
-# Postgres
-ENV POSTGRES_PASSWORD=airflow
-ENV POSTGRES_USER=postgres
 
 ENV HADOOP_CONF_DIR=/opt/spark/${SPARK_FILE}/etc/hadoop/
 ENV YARN_CONF_DIR=/opt/spark/${SPARK_FILE}/etc/hadoop/
 
 # Install apache airflow with subpackages
-RUN pip install apache-airflow[aws,spark]==${AIRFLOW_VERSION}
+RUN apt update \
+    && apt install build-essential -yqq \
+    && apt install libpq-dev -yqq
 
-# Install Postgres
-RUN apt install postgresql postgresql-contrib -yqq
+RUN pip install apache-airflow[aws,spark,postgres]==${AIRFLOW_VERSION}
 
-# Create a PostgreSQL role named ``docker`` with ``docker`` as the password and
-# then create a database `docker` owned by the ``docker`` role.
-# Note: here we use ``&&\`` to run commands one after the other - the ``\``
-#       allows the RUN command to span multiple lines.
-#RUN psql --command "CREATE USER postgres PASSWORD 'airflow';"
-# Create a PostgreSQL role named ``docker`` with ``docker`` as the password and
-# then create a database `docker` owned by the ``docker`` role.
-# Note: here we use ``&&\`` to run commands one after the other - the ``\``
-#       allows the RUN command to span multiple lines.
-CMD psql --command "CREATE USER postgres PASSWORD 'airflow';" \
-    && psql --command "CREATE DATABASE airflow" \
-    && createdb -O postgres airflow
-
-RUN apt install libpq-dev -yqq \
-    && pip install psycopg2
 # Expose ports (just to indicate that this container needs to map port)
 EXPOSE 8080
-
 
 # Execute CMD
 RUN echo "airflow db init" >> ~/.bashrc \
