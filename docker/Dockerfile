@@ -54,6 +54,14 @@ RUN apt update \
 
 RUN pip install apache-airflow[aws,spark,postgres]==${AIRFLOW_VERSION}
 
+# Install Data Science packages
+RUN pip install pandas \
+    && pip install yfinance
+
+# Install Postgres
+#RUN apt install postgresql postgresql-contrib -yqq \
+#    &&  pip install psycopg2
+
 # Expose ports (just to indicate that this container needs to map port)
 EXPOSE 8080
 
