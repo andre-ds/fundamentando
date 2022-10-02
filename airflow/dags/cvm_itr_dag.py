@@ -5,14 +5,22 @@ from groups.group_extractions_cvm import extraction_cvm
 from groups.group_pre_processing_cvm import pre_processing_cvm
 from utils.Utils import path_environment, unzippded_files, load_bucket
 from airflow.operators.python import PythonOperator
+from airflow.operators.bash_operator import BashOperator
 
+
+EXECUTION_DATE = '{{ ds }}'
 
 with DAG(
     dag_id='cvm_itr',
-    start_date=datetime(2022, 8, 9),
-    schedule_interval='0 12 * * 5',
+    start_date=datetime(2022, 9, 29),
+    schedule_interval='0 18 * * 5',
     catchup=False
 ) as dag:
+
+    bash_test = BashOperator(
+        task_id='teste_id',
+        bash_command=f'echo {EXECUTION_DATE}'
+    )
 
     environment = PythonOperator(
         task_id='path_environment',
@@ -25,9 +33,9 @@ with DAG(
         task_id='upload_s3_raw_itr',
         python_callable=load_bucket,
         op_kwargs={
-            'path':'raw',
-            'bucket':'fundamentus-raw',
-            'dataType':'itr'
+            'bucket': 'fundamentus-raw',
+            'dataType': 'raw-itr',
+            'execution_date': EXECUTION_DATE
         }
     )
 
@@ -39,20 +47,19 @@ with DAG(
         }
     )
 
-    upload_s3_p = PythonOperator(
-        task_id='upload_s3_pp_itr',
-        python_callable=load_bucket,
-        op_kwargs={
-            'path':'pre-processed',
-            'bucket':'fundamentus-pre-processed',
-            'dataType':'itr'
-        }
-    )
-
     pp_cvm_itr_dre = pre_processing_cvm(dataType='itr_dre')
     pp_cvm_itr_bpp = pre_processing_cvm(dataType='itr_bpp')
     pp_cvm_itr_bpa = pre_processing_cvm(dataType='itr_bpa')
 
+    upload_s3_p = PythonOperator(
+        task_id='upload_s3_pp_itr',
+        python_callable=load_bucket,
+        op_kwargs={
+            'bucket': 'fundamentus-pre-processed',
+            'dataType': 'pre-processed-itr',
+            'execution_date': EXECUTION_DATE
+        }
+    )
 
-environment >> ext_cvm_itr >> upload_s3_r >> unzip_cvm >> [pp_cvm_itr_dre, pp_cvm_itr_bpa, pp_cvm_itr_bpp] >> upload_s3_p
-
+bash_test >> environment >> ext_cvm_itr >> upload_s3_r >> unzip_cvm >> [
+    pp_cvm_itr_dre, pp_cvm_itr_bpa, pp_cvm_itr_bpp] >> upload_s3_p
