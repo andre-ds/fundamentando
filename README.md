@@ -40,7 +40,7 @@ Na segunda etapa, os dados são pré-processados e armazenados na camada **pre_p
 
 Exemplo:
 
-**pp_2022_09_15_dfp_dre_2022.parquet**
+**pp_dfp_dre_2022.parquet**
 
 Onde: 
 
@@ -159,7 +159,8 @@ Abreviação | Descrição
 1s | Indica uma janela de 1 (n) semestre.
 1s | Indica uma janela de 1 (n) ano.
 
-* Obs: quando p período vem acompanhado de *_lag* indica que se trata do respectivo registro anterior, ou seja, 1q_lag indica que a variável é igual a um trimestre anterior ao respectivo período.
+Obs: quando p período vem acompanhado de *_lag* indica que se trata do respectivo registro anterior, ou seja, 
+1q_lag indica que a variável é igual a um trimestre anterior ao respectivo período.
 Assim, podemos ter as seguintes combinações de atributos do tipo lag:
 
 Abreviação | Descrição 
