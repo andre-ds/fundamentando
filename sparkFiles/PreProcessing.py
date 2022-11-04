@@ -5,6 +5,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import IntegerType
 from pyspark.sql.types import StructField, StructType, DateType, DoubleType, StringType, IntegerType, FloatType
 from pyspark.sql.functions import col, quarter, to_date, month, year, when, to_date, asc, months_between, round, concat, lit, regexp_replace, sum, max
+from pyspark.sql.window import Window
 
 
 class PreProcessing():
@@ -43,7 +44,7 @@ class PreProcessing():
     def _union_quarters(self, dataset_itr:DataFrame, dataset_dfp:DataFrame) -> DataFrame:
 
         # Agregations Q1, Q2 and Q3
-        df_sum = dataset_itr.groupBy(['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
+        df_sum = dataset_itr.groupBy(['processed_at', 'id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
             lit(None).alias('dt_refer'),
             lit(None).alias('dt_fim_exerc'),
             lit(None).alias('dt_ini_exerc'),
@@ -66,7 +67,7 @@ class PreProcessing():
 
         # Union and sum datasets
         dataset_q4 = dataset_dfp.union(df_sum.select(dataset_dfp.columns))
-        dataset_q4 = dataset_q4.groupBy(['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
+        dataset_q4 = dataset_q4.groupBy(['processed_at', 'id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
             max('dt_refer').alias('dt_refer'), \
             max('dt_fim_exerc').alias('dt_fim_exerc'), \
             max('dt_ini_exerc').alias('dt_ini_exerc'), \
@@ -284,35 +285,67 @@ class PreProcessing():
         return dataset
 
 
-    def pre_process_cvm(self, dataType:str, schema:StructField, year:str):
-        
-        from sparkDocuments import types_dict, DIR_PATH_RAW, DIR_PATH_PROCESSED
- 
+    def pre_process_cvm(self, dataType:str, schema:StructField, year:str, execution_date:DateType):
 
-        list_files = [file for file in os.listdir(DIR_PATH_RAW) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
+
+        from sparkDocuments import types_dict, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR
+
+
+        def _saving_pre_processing(dataset, path, dataType, file):
+                #.partitionBy('id_cvm')
+            saveFilename = f'pp_{dataType}_{file[-8:-4]}.parquet'
+            dataset.write.format('parquet') \
+                .mode('overwrite') \
+                .save(os.path.join(path, saveFilename)) 
+
+        def _processed_date(dataset, execution_date):
+            dataset = (
+             dataset
+             .withColumn('processed_at', lit(execution_date))
+             .withColumn('processed_at', to_date(col('processed_at'), 'yyyy-MM-dd'))
+            )
+       
+            return dataset
+
+
+        if dataType == 'itr_dre' or dataType == 'itr_bpp' or dataType == 'itr_bpa':
+            list_files = [file for file in os.listdir(DIR_PATH_RAW_ITR) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
+        elif dataType == 'dfp_dre' or dataType == 'dfp_bpp' or dataType == 'dfp_bpa':
+            list_files = [file for file in os.listdir(DIR_PATH_RAW_DFP) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
+    
+
         for file in list_files:
             if year == file[-8:-4]:
                 # Oppen Datasets
-                dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                 if dataType == 'itr_dre':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_itr_dre(dataset = dataset)
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                 elif dataType == 'itr_bpp':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_itr_bpp(dataset = dataset)
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)                   
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                 elif dataType == 'itr_bpa':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_itr_bpa(dataset = dataset)
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)        
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                 elif dataType == 'dfp_dre':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_dfp_dre(dataset = dataset)
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
                 elif dataType == 'dfp_bpp':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_dfp_bpp(dataset = dataset)
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
                 elif dataType == 'dfp_bpa':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_dfp_bpa(dataset = dataset)
-                # Saving
-                saveFilename = f'pp_{self.todaystr}_{dataType}_{file[-8:-4]}.parquet'
-                dataset.write.format('parquet') \
-                    .mode('overwrite') \
-                    .partitionBy('id_cvm') \
-                    .save(os.path.join(DIR_PATH_PROCESSED, saveFilename))
-
-
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
 
 

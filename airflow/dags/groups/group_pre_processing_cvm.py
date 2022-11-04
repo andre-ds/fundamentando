@@ -27,17 +27,17 @@ def __taskgroup_ids(dataType):
     return group_id, tooltip
 
 
-def pre_processing_cvm(dataType):
+def pre_processing_cvm(dataType, execution_date):
 
     group_id, tooltip = __taskgroup_ids(dataType=dataType)
 
     with TaskGroup(group_id=group_id, tooltip=tooltip) as group:
 
         for year in years_list:
-            FILE_PATH = 'spark-submit /opt/sparkFiles/pre_processing_cvm.py --dataType "{dataType}" --years_list {year}'
+            FILE_PATH = 'spark-submit /opt/sparkFiles/pre_processing_cvm.py --dataType "{dataType}" --years_list {year} --execution_date {execution_date}'
             pre_processing_cvm = BashOperator(
                 task_id=f'pre_processing_cvm_{dataType}_{year}',
-                bash_command=FILE_PATH.format(dataType=dataType, year=year)
+                bash_command=FILE_PATH.format(dataType=dataType, year=year, execution_date=execution_date)
             )
 
         return group

@@ -3,8 +3,13 @@ from pyspark.sql.types import StructField, StructType, DateType, DoubleType, Str
 
 
 PATH_DATALAKE = '/datalake'
-DIR_PATH_RAW = os.path.join(PATH_DATALAKE, 'raw')
-DIR_PATH_PROCESSED = os.path.join(PATH_DATALAKE, 'pre-processed')
+#DIR_PATH_RAW = os.path.join(PATH_DATALAKE, 'raw')
+DIR_PATH_RAW_DFP = os.path.join(PATH_DATALAKE, 'raw-dfp')
+DIR_PATH_RAW_ITR = os.path.join(PATH_DATALAKE, 'raw-itr')
+DIR_PATH_RAW_STOCK = os.path.join(PATH_DATALAKE, 'raw-stock')
+DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
+DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
+
 
 types_dict = {
             'itr_dre':'itr_cia_aberta_DRE_con',

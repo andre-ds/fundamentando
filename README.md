@@ -136,6 +136,10 @@ qty | Indica quantidade.
 pct | Percentual.
 is | Representa uma variável binária 1 (True) ou 0 (False).
 
+**Tema**
+
+ Indica a natureza da variável em si. Por exemlo, sales_revenue se trata da receita de vendas da empresa.
+
 **Medida**
 Abreviação | Descrição 
 ------|------
@@ -149,12 +153,22 @@ tot | total
 **Período**
 Abreviação | Descrição 
 ------|------
-1m | Indica uma janela de 1 (n) dia.
+1d | Indica uma janela de 1 (n) dia.
 1m | Indica uma janela de 1 (n) mês.
 1q | Indica uma janela de 1 (n) trimestre.
 1s | Indica uma janela de 1 (n) semestre.
 1s | Indica uma janela de 1 (n) ano.
 
+* Obs: quando p período vem acompanhado de *_lag* indica que se trata do respectivo registro anterior, ou seja, 1q_lag indica que a variável é igual a um trimestre anterior ao respectivo período.
+Assim, podemos ter as seguintes combinações de atributos do tipo lag:
+
+Abreviação | Descrição 
+------|------
+1d_lag | Indica uma janela de 1 (n) dia.
+1m_lag | Indica uma janela de 1 (n) mês.
+1q_lag | Indica uma janela de 1 (n) trimestre.
+1s_lag | Indica uma janela de 1 (n) semestre.
+1s_lag | Indica uma janela de 1 (n) ano.
 
 ## Dicionário de Dados Brutos CVM
 

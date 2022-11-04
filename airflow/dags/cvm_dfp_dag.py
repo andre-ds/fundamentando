@@ -12,7 +12,7 @@ EXECUTION_DATE = '{{ ds }}'
 
 with DAG(
     dag_id='cvm_dfp',
-    start_date=datetime(2022, 9, 29),
+    start_date=datetime(2022, 10, 14),
     schedule_interval='0 18 * * 5',
     catchup=False
 ) as dag:
@@ -22,13 +22,13 @@ with DAG(
         python_callable=path_environment
     )
 
-    ext_cvm_dfp = extraction_cvm(dataType='dfp')
+    ext_cvm_dfp = extraction_cvm(dataType='dfp', execution_date=EXECUTION_DATE)
 
     upload_s3_r = PythonOperator(
         task_id='upload_s3_raw_dfp',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket': 'fundamentus-raw',
+            'bucket': 'fundamentus-raw-dfp',
             'dataType': 'raw-dfp',
             'execution_date': EXECUTION_DATE
         }
@@ -42,15 +42,15 @@ with DAG(
         }
     )
 
-    pp_cvm_dfp_dre = pre_processing_cvm(dataType='dfp_dre')
-    pp_cvm_dfp_bpa = pre_processing_cvm(dataType='dfp_bpa')
-    pp_cvm_dfp_bpp = pre_processing_cvm(dataType='dfp_bpp')
+    pp_cvm_dfp_dre = pre_processing_cvm(dataType='dfp_dre', execution_date=EXECUTION_DATE)
+    pp_cvm_dfp_bpa = pre_processing_cvm(dataType='dfp_bpa', execution_date=EXECUTION_DATE)
+    pp_cvm_dfp_bpp = pre_processing_cvm(dataType='dfp_bpp', execution_date=EXECUTION_DATE)
 
     upload_s3_p = PythonOperator(
         task_id='upload_s3_pp_dfp',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket': 'fundamentus-pre-processed',
+            'bucket': 'fundamentus-pre-processed-dfp',
             'dataType': 'pre-processed-dfp',
             'execution_date': EXECUTION_DATE
         }
