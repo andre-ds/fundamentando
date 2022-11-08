@@ -146,9 +146,11 @@ Abreviação | Descrição
 avg | Média
 mda | Mediana
 std | Desvio Padrão
+var | Variância
 min | Mínimo
 max | Máximo
-tot | total
+tot | Total
+tx  | Taxa
 
 **Período**
 Abreviação | Descrição 
