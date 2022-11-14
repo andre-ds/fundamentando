@@ -75,10 +75,12 @@ def unzippded_files(ti, dataType):
 
     print(list_files)
     for file in list_files:
-        with zipfile.ZipFile(os.path.join(DIR_PATH_RAW, file), 'r') as zip_ref:
-            zip_ref.extractall(DIR_PATH_RAW)
-            #zip_ref.close()
-
+        try:
+            with zipfile.ZipFile(os.path.join(DIR_PATH_RAW, file), 'r') as zip_ref:
+                zip_ref.extractall(DIR_PATH_RAW)
+        except:
+            print('Error unzip')
+            
 def load_bucket(ti, bucket, dataType, execution_date):
 
     import os

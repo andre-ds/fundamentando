@@ -9,8 +9,8 @@ ARG AIRFLOW_VERSION=2.3.3
 # Arguments Java
 ARG JAVA_VERSION=11.0.16
 # Spark
-ARG SPARK_VERSION=spark-3.3.0
-ARG SPARK_FILE=spark-3.3.0-bin-hadoop3
+ARG SPARK_VERSION=spark-3.3.1
+ARG SPARK_FILE=spark-3.3.1-bin-hadoop3
 # Pytho
 ARG PYTHON_VERSION=python3.9
 
