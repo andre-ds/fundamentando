@@ -1,10 +1,7 @@
 from sparkFiles.PreProcessing import PreProcessing
 from sparkFiles.sparkDocuments import schema_dre
-from msilib import schema
-from operator import concat, index
 import boto3
 import os
-import re
 import pandas as pd
 from datetime import date, timedelta
 from pyspark.context import SparkContext
@@ -16,18 +13,15 @@ import investpy as inv
 from datetime import datetime
 from pyspark.sql.functions import col, quarter, to_date, month, year, when, to_date, asc, months_between, round, concat, lit, regexp_replace, sum, max, lag, abs, collect_list, row_number, slice
 from pyspark.sql.types import StructField, StructType, DateType, DoubleType, StringType, IntegerType, FloatType, ArrayType
-import yfinance as yf
-import investpy
 from pyspark.sql.window import Window
 from pyspark.sql.functions import udf
 import numpy as np
+#from pyspark.sql import functions as F
 
+DIR_PATH = os.path.join(os.path.dirname(os.path.realpath('__file__')), 'datalake')
+DIR_PATH_PROCESSED_ITR = os.path.join(DIR_PATH, 'pre-processed-itr')
+DIR_PATH_PROCESSED_DFP = os.path.join(DIR_PATH, 'pre-processed-dfp')
 
-
-DIR_PATH = '/home/andre/Dropbox/projects/fundamentalista_pipeline/datalake'
-DIR_PATH_RAW = '/home/andre/Dropbox/projects/fundamentalista_pipeline/datalake/raw'
-DIR_PATH_PROCESSED_ITR = '/home/andre/Dropbox/projects/fundamentalista_pipeline/datalake/pre-processed-itr'
-DIR_PATH_PROCESSED_DFP = '/home/andre/Dropbox/projects/fundamentalista_pipeline/datalake/pre-processed-dfp'
 
 '''
     bash_test = BashOperator(
@@ -87,15 +81,19 @@ for year in years_list:
 
 
 # Calculating Lags
-def get_lag(dataset, type, measure, variable, nlag, period):
+def get_lag(dataset, type, measure, variable, nlag, period=None, period_text=None):
 
     windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
-    dataset = dataset.withColumn(f'{type}_{measure}_{variable}_{nlag}{period}_lag',lag(variable, nlag).over(windowSpec))
+
+    if period_text is not None:
+        dataset = dataset.withColumn(f'{type}_{measure}_{variable}_{period_text}_lag',lag(variable, nlag).over(windowSpec))
+    else:
+        dataset = dataset.withColumn(f'{type}_{measure}_{variable}_{nlag}{period}_lag',lag(variable, nlag).over(windowSpec))
 
     return dataset
 
 
-def get_percentage_change(dataset, variable, nlag, period, period_text:None):
+def get_percentage_change(dataset, variable, nlag, period=None, period_text=None):
 
     windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
    
@@ -119,52 +117,52 @@ def get_percentage_change(dataset, variable, nlag, period, period_text:None):
 
 def measure_run(dataset, variable, n_periods, measure_type):
 
-    def mean_func(x):
+    def _mean_func(x):
         result = np.mean(x)
         return float(result)  
 
-    def median_func(x):
+    def _median_func(x):
         result = np.median(x)
         return float(result)   
 
-    def std_func(x):
+    def _std_func(x):
         result = np.std(x)
         return float(result)
 
-    def var_func(x):
+    def _var_func(x):
         
         result = np.var(x)
         return float(result)
 
-    def min_func(x):
+    def _min_func(x):
         
         result = np.min(x)
         return float(result)
 
-    def max_func(x):
+    def _max_func(x):
         
         result = np.max(x)
         return float(result)
 
-
+    
     if measure_type == 'mean':
         variable_name = f'amt_avg_{variable}_{n_periods}'
-        func_udf = udf(mean_func, DoubleType())
+        func_udf = udf(_mean_func, DoubleType())
     elif measure_type == 'median':
         variable_name = f'amt_mda_{variable}_{n_periods}'
-        func_udf = udf(median_func, DoubleType())
+        func_udf = udf(_median_func, DoubleType())
     elif measure_type == 'std':
         variable_name = f'amt_std_{variable}_{n_periods}'
-        func_udf = udf(var_func, DoubleType())
+        func_udf = udf(_var_func, DoubleType())
     elif measure_type == 'var':
         variable_name = f'amt_var_{variable}_{n_periods}'
-        func_udf = udf(std_func, DoubleType())
+        func_udf = udf(_std_func, DoubleType())
     elif measure_type == 'min':
         variable_name = f'amt_min_{variable}_{n_periods}'
-        func_udf = udf(min_func, DoubleType())
+        func_udf = udf(_min_func, DoubleType())
     elif measure_type == 'max':
         variable_name = f'amt_max_{variable}_{n_periods}'
-        func_udf = udf(max_func, DoubleType())
+        func_udf = udf(_max_func, DoubleType())
 
     windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
 
@@ -187,73 +185,75 @@ def measure_run(dataset, variable, n_periods, measure_type):
     return dataset
 
 
-variable_list = ['cost_goods_and_services', 'earnings_before_income_tax_and_social_contribution',
-               'earnings_before_interest_and_taxes', 'financial_results', 'groos_revenue',
-               'net_profit', 'operating_revenues_and_expenses', 'sales_revenue']
+def measure_beta(dataset, variable, n_periods):
+
+    def _beta(x, y, deg=1):
+        try:    
+            coef = np.polyfit(x, y, deg=deg)
+            coef = coef[-1]    
+            return float(coef)
+        except:
+            return float(np.nan)
+
+    
+    variable_name = f'amt_beta_{variable}_{n_periods}'
+    func_udf = udf(_beta, DoubleType())
+
+    windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
+
+    df = (
+        dataset
+        .orderBy(['id_cvm','dt_year','dt_quarter'])
+        .withColumn('y_array', row_number().over(windowSpec))
+        .groupBy('id_cvm')
+        .agg(collect_list(variable).alias('x_array'), collect_list('y_array').alias('y_array'))
+    )
+
+    dataset = (
+        dataset
+        .withColumn('row_n', row_number().over(windowSpec))
+        .join(df, on='id_cvm', how='left')
+        .withColumn('x_array_slice', slice(col('x_array'), col('row_n'), n_periods))
+        .withColumn('y_array_slice', slice(col('y_array'), col('row_n'), n_periods))
+        .withColumn(variable_name, func_udf(col('x_array_slice'), col('y_array_slice')))
+        .drop(*['row_n', 'x_array', 'x_array_slice', 'y_array', 'y_array_slice'])
+    )
+
+    return dataset
+
 
 # Calculating Lag and percentage change
-for v in variable_list:
+variable_list_lag = ['sales_revenue', 'cost_goods_and_services',
+                     'earnings_before_interest_and_taxes', 'financial_results',
+                     'net_profit']
+for v in variable_list_lag:
     dataset = get_lag(dataset=dataset, type='amt', measure='tot', variable=v, nlag=1, period='m')
-    dataset = get_lag(dataset=dataset, type='amt', measure='tot', variable=v, nlag=4, period='q', period_text='1y')
+    dataset = get_lag(dataset=dataset, type='amt', measure='tot', variable=v, nlag=4, period_text='1y')
     dataset = get_percentage_change(dataset=dataset, variable=v, nlag=1, period='m')
-    dataset = get_percentage_change(dataset=dataset, variable=v, nlag=4, period='q')
+    dataset = get_percentage_change(dataset=dataset, variable=v, nlag=4, period_text='1y')
 
 # Mean Beetween rows
-for v in variable_list:
+variable_list_rows = ['sales_revenue', 'cost_goods_and_services',
+                     'earnings_before_interest_and_taxes', 'financial_results',
+                     'net_profit']
+for v in variable_list_rows:
     print(f'Variable: {v}')
     dataset = measure_run(dataset=dataset, variable=v, n_periods=3, measure_type='mean')
-for v in variable_list:
+for v in variable_list_rows:
     print(f'Variable: {v}')
     dataset = measure_run(dataset=dataset, variable=v, n_periods=3, measure_type='std')
 
+# Beta
+variable_beta = ['sales_revenue', 'cost_goods_and_services',
+                     'earnings_before_interest_and_taxes', 'financial_results',
+                     'net_profit']
+for v in variable_beta:
+    print(f'Variable: {v}')
+    dataset = measure_beta(dataset=dataset, variable=v, n_periods=3)
+    dataset = measure_beta(dataset=dataset, variable=v, n_periods=6)
+    dataset = measure_beta(dataset=dataset, variable=v, n_periods=12)
 
 
+#dataset.toPandas().to_csv(os.path.join(DIR_PATH, 'teste.csv'))
 
 
-
-
-
-
-
-
-
-
-
-# Download S3 Bucket
-def download_s3_folder(s3_client, s3_folder, local_dir, aws_bucket):
-    import boto3
-    from os import path, makedirs
-    from botocore.exceptions import ClientError
-    from boto3.exceptions import S3TransferFailedError
-
-    def get_all_s3_objects(s3, **base_kwargs):
-        continuation_token = None
-        while True:
-            list_kwargs = dict(MaxKeys=1000, **base_kwargs)
-            if continuation_token:
-                list_kwargs['ContinuationToken'] = continuation_token
-            response = s3.list_objects_v2(**list_kwargs)
-            yield from response.get('Contents', [])
-            if not response.get('IsTruncated'):
-                break
-            continuation_token = response.get('NextContinuationToken')
-
-    all_s3_objects_gen = get_all_s3_objects(s3_client, Bucket=aws_bucket)
-
-    for obj in all_s3_objects_gen:
-        source = obj['Key']
-        if source.startswith(s3_folder):
-            destination = path.join(local_dir, source)
-            if not path.exists(path.dirname(destination)):
-                makedirs(path.dirname(destination))
-            try:
-                s3_client.download_file(aws_bucket, source, destination)
-            except (ClientError, S3TransferFailedError) as e:
-                print('[ERROR] Could not download file "%s": %s' % (source, e))
-
-
-download_s3_folder(s3_client=s3, s3_folder='pp_2022_10_02_itr_dre_2015.parquet',
-                   local_dir=DIR_PATH, aws_bucket='fundamentus-pre-processed')
-
-# Open dataframe
-# dataset = sk.read.parquet(os.path.join(DIR_PATH_PROCESSED_ITR, 'pp_itr_dre_2013.parquet'))
