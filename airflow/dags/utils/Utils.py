@@ -30,6 +30,8 @@ def path_environment(ti):
     list_folders = os.listdir(PATH_DATALAKE)
     if 'raw-stock' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'raw-stock'))
+    if 'raw-registration' not in list_folders:
+        os.mkdir(os.path.join(PATH_DATALAKE, 'raw-registration'))
     if 'raw-itr' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'raw-itr'))
     if 'raw-dfp' not in list_folders:
@@ -41,6 +43,7 @@ def path_environment(ti):
     if 'analytical' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'analytical'))
 
+    DIR_PATH_RAW_REGISTRATION = os.path.join(PATH_DATALAKE, 'raw-registration')
     DIR_PATH_RAW_STOCK = os.path.join(PATH_DATALAKE, 'raw-stock')
     DIR_PATH_RAW_ITR = os.path.join(PATH_DATALAKE, 'raw-itr')
     DIR_PATH_RAW_DFP = os.path.join(PATH_DATALAKE, 'raw-dfp')
@@ -51,6 +54,7 @@ def path_environment(ti):
     ti.xcom_push(key='DIR_PATH', value=DIR_PATH)
     # Raw folders
     ti.xcom_push(key='DIR_PATH_RAW_STOCK', value=DIR_PATH_RAW_STOCK)
+    ti.xcom_push(key='DIR_PATH_RAW_REGISTRATION', value=DIR_PATH_RAW_REGISTRATION)
     ti.xcom_push(key='DIR_PATH_RAW_ITR', value=DIR_PATH_RAW_ITR)
     ti.xcom_push(key='DIR_PATH_RAW_DFP', value=DIR_PATH_RAW_DFP)
     # Pre-processed folders
@@ -64,7 +68,10 @@ def unzippded_files(ti, dataType):
     import re
     import zipfile
 
-    if dataType == 'dfp':
+    if dataType == 'registration':
+        DIR_PATH_RAW = ti.xcom_pull(key='DIR_PATH_RAW_REGISTRATION', task_ids='path_environment')
+        print(DIR_PATH_RAW)
+    elif dataType == 'dfp':
         DIR_PATH_RAW = ti.xcom_pull(key='DIR_PATH_RAW_DFP', task_ids='path_environment')
         print(DIR_PATH_RAW)
     elif dataType == 'itr':
@@ -86,6 +93,11 @@ def load_bucket(ti, bucket, dataType, execution_date):
     import os
     import re
     from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+
+
+    def __load_raw_registration(DIR_PATH, dataType):
+
+        hook.load_file(filename=os.path.join(DIR_PATH, dataType), bucket_name=bucket, key=dataType, replace=True)
 
 
     def __load_raw_dfp_itr(DIR_PATH, dataType):
@@ -116,7 +128,13 @@ def load_bucket(ti, bucket, dataType, execution_date):
     extract_at = execution_date.replace('-', '_')
     print(extract_at)
 
-    if dataType == 'raw-dfp':
+    if dataType == 'registration':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_REGISTRATION', task_ids='path_environment')
+        dataType = f'extracted_{extract_at}_cad_cia_aberta.csv'
+        __load_raw_registration(DIR_PATH=DIR_PATH, dataType=dataType)
+
+
+    elif dataType == 'raw-dfp':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_DFP', task_ids='path_environment')
         dataType = f'extracted_{extract_at}_dfp_cia_aberta'
         __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)

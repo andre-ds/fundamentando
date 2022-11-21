@@ -10,6 +10,7 @@ from airflow.operators.bash_operator import BashOperator
 
 EXECUTION_DATE = '{{ ds }}'
 
+
 with DAG(
     dag_id='cvm_dfp',
     start_date=datetime(2022, 10, 14),

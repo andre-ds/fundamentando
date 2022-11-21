@@ -9,7 +9,6 @@ from utils.Utils import load_bucket
 
 EXECUTION_DATE = '{{ ds }}'
 
-
 with DAG(
     dag_id='stock_extractions',
     start_date=datetime(2022, 10, 6),

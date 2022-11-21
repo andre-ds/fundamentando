@@ -3,13 +3,15 @@ from pyspark.sql.types import StructField, StructType, DateType, DoubleType, Str
 
 
 PATH_DATALAKE = '/datalake'
-#DIR_PATH_RAW = os.path.join(PATH_DATALAKE, 'raw')
 DIR_PATH_RAW_DFP = os.path.join(PATH_DATALAKE, 'raw-dfp')
 DIR_PATH_RAW_ITR = os.path.join(PATH_DATALAKE, 'raw-itr')
 DIR_PATH_RAW_STOCK = os.path.join(PATH_DATALAKE, 'raw-stock')
 DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
 DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
 
+DIR_S3_RAW_DFP = 's3a://fundamentus-pre-processed-dfp'
+DIR_S3_RAW_ITR = 's3a://fundamentus-pre-processed-itr'
+DIR_S3_ANALYTICAL_DRE = 's3a://fundamentus-analytical-dre'
 
 types_dict = {
             'itr_dre':'itr_cia_aberta_DRE_con',
@@ -102,6 +104,27 @@ schema_ticker2 = StructType([
     StructField('volume', IntegerType(), True)
 ])
 
+# Create an empty RDD with empty schema
+schema_pp_dre = StructType([
+    StructField('id_cvm', StringType(), True),
+    StructField('id_cnpj', StringType(), True),
+    StructField('txt_company_name', StringType(), True),
+    StructField('dt_refer', DateType(), True),
+    StructField('dt_fim_exerc', DateType(), True),
+    StructField('dt_ini_exerc', DateType(), True),
+    StructField('dt_year', IntegerType(), True),
+    StructField('dt_quarter', IntegerType(), True),
+    StructField('cost_goods_and_services', FloatType(), True),
+    StructField('earnings_before_income_tax_and_social_contribution',
+                FloatType(), True),
+    StructField('earnings_before_interest_and_taxes', FloatType(), True),
+    StructField('financial_results', FloatType(), True),
+    StructField('groos_revenue', FloatType(), True),
+    StructField('net_profit', FloatType(), True),
+    StructField('operating_revenues_and_expenses', FloatType(), True),
+    StructField('sales_revenue', FloatType(), True),
+    StructField('processed_at', DateType(), True),
+])
 
 ticker_list = ['ABCB4.SA', 'AGRO3.SA', 'RAIL3.SA', 'ALPA3.SA', 'ALPA4.SA', 'ALSO3.SA', 'AMAR3.SA', 'ABEV3.SA', 'ADHM3.SA', 'ARZZ3.SA', 'BBAS3.SA', 'BBDC3.SA', 'BBDC4.SA',
 'BEEF3.SA', 'BPHA3.SA', 'BPAN4.SA', 'BRAP3.SA', 'BRAP4.SA', 'BRFS3.SA', 'APER3.SA', 'BRKM3.SA', 'BRML3.SA', 'BRPR3.SA', 'OIBR3.SA', 'OIBR4.SA', 'B3SA3.SA', 'CARD3.SA', 'CCRO3.SA',
