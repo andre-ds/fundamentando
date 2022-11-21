@@ -8,14 +8,14 @@ from emr_serverless.operators.emr import (
 )
 
 # Replace these with your correct values
-EMR_FUNDAMENTUS = 'arn:aws:iam::368300062869:role/EMR_FUNDAMENTUS'
-S3_LOGS_BUCKET = 'fundamentus-codes'
+
 
 DEFAULT_MONITORING_CONFIG = {
     "monitoringConfiguration": {
-        "s3MonitoringConfiguration": {"logUri": f's3a://{S3_LOGS_BUCKET}/logs/'}
+        "s3MonitoringConfiguration": {"logUri": f"s3://{S3_LOGS_BUCKET}/logs/"}
     },
 }
+
 
 with DAG(
     dag_id='analytical_dre',
