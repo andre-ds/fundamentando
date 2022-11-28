@@ -9,9 +9,9 @@ DIR_PATH_RAW_STOCK = os.path.join(PATH_DATALAKE, 'raw-stock')
 DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
 DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
 
-DIR_S3_RAW_DFP = 's3a://fundamentus-pre-processed-dfp'
-DIR_S3_RAW_ITR = 's3a://fundamentus-pre-processed-itr'
-DIR_S3_ANALYTICAL_DRE = 's3a://fundamentus-analytical-dre'
+DIR_S3_RAW_DFP = 's3://fundamentus-pre-processed-dfp'
+DIR_S3_RAW_ITR = 's3://fundamentus-pre-processed-itr'
+DIR_S3_ANALYTICAL_DRE = 's3://fundamentus-analytical'
 
 types_dict = {
             'itr_dre':'itr_cia_aberta_DRE_con',

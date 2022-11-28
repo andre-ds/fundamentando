@@ -1,5 +1,6 @@
 from datetime import datetime
 from airflow import DAG
+from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
 from emr_serverless.operators.emr import (
     EmrServerlessCreateApplicationOperator,
@@ -7,7 +8,9 @@ from emr_serverless.operators.emr import (
     EmrServerlessDeleteApplicationOperator,
 )
 
-# Replace these with your correct values
+
+EMR_FUNDAMENTUS = Variable.get('EMR_FUNDAMENTUS')
+S3_LOGS_BUCKET = Variable.get('S3_LOGS_BUCKET')
 
 
 DEFAULT_MONITORING_CONFIG = {
@@ -28,20 +31,34 @@ with DAG(
     create_app = EmrServerlessCreateApplicationOperator(
         task_id='create_spark_app',
         job_type='SPARK',
-        release_label='emr-6.7.0',
+        release_label='emr-6.8.0',
         config={'name': 'airflow-test'},
     )
 
     application_id = create_app.output
 
-
-    append_datasets = EmrServerlessStartJobOperator(
-        task_id='start_job_1',
+ 
+    union_datasets = EmrServerlessStartJobOperator(
+        task_id='dre_union_id',
         application_id=application_id,
         execution_role_arn=EMR_FUNDAMENTUS,
         job_driver={
             "sparkSubmit": {
-                'entryPoint':'s3a://fundamentus-codes/sparkFiles/dre_analytical.py',
+                'entryPoint':'s3://fundamentus-codes/sparkFiles/dre_union.py',
+                'sparkSubmitParameters': '--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.executor.cores=1 --conf spark.executor.memory=4g --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.instances=1',
+            }
+        },
+        configuration_overrides=DEFAULT_MONITORING_CONFIG,
+    )
+
+    pre_processing = EmrServerlessStartJobOperator(
+        task_id='dre_analytical_id',
+        application_id=application_id,
+        execution_role_arn=EMR_FUNDAMENTUS,
+        job_driver={
+            "sparkSubmit": {
+                'entryPoint':'s3://fundamentus-codes/sparkFiles/dre_analytical.py',
+                'sparkSubmitParameters': '--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.archives=s3://fundamentus-codes/pyspark_venv.tar.gz#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executor.cores=1 --conf spark.executor.memory=4 --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.instances=1',
             }
         },
         configuration_overrides=DEFAULT_MONITORING_CONFIG,
@@ -53,4 +70,4 @@ with DAG(
         trigger_rule="all_done",
     )
 
-    create_app >> append_datasets >> delete_app
+    create_app >> pre_processing >> delete_app

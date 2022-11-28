@@ -1,105 +1,205 @@
-import argparse
-from operator import index
-from datetime import date
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, lit, sum, max
+import os
+import numpy as np
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, lag, abs, collect_list, row_number, slice, udf
+from pyspark.sql.types import DoubleType
+from pyspark.sql.window import Window
+from sparkDocuments import DIR_S3_ANALYTICAL_DRE
 
 
-def __files_list():
-    years_list = [*range(2010, date.today().year+1, 1)]
-    files_list = []
-    for y in years_list:
-        zip_files = [f'pp_itr_dre_{y}.parquet', f'pp_dfp_dre_{y}.parquet']
-        files_list.append(zip_files)
+# Calculating Lags
+def get_lag(dataset, type, measure, variable, nlag, period=None, period_text=None):
 
-    return files_list
+    windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
+
+    if period_text is not None:
+        dataset = dataset.withColumn(f'{type}_{measure}_{variable}_{period_text}_lag',lag(variable, nlag).over(windowSpec))
+    else:
+        dataset = dataset.withColumn(f'{type}_{measure}_{variable}_{nlag}{period}_lag',lag(variable, nlag).over(windowSpec))
+
+    return dataset
 
 
-def _union_quarters(dataset_itr:DataFrame, dataset_dfp:DataFrame) -> DataFrame:
+def get_percentage_change(dataset, variable, nlag, period=None, period_text=None):
+
+    windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
+   
+    if period_text is not None:
+        dataset = (
+            dataset
+            .withColumn('var_lag',lag(variable, nlag).over(windowSpec))
+            .withColumn(f'pct_tx_{variable}_{period_text}', (col(variable)-col('var_lag'))/abs(col('var_lag')))
+            .drop('var_lag')
+        )       
+    else:
+        dataset = (
+            dataset
+            .withColumn('var_lag',lag(variable, nlag).over(windowSpec))
+            .withColumn(f'pct_tx_{variable}_{nlag}{period}', (col(variable)-col('var_lag'))/abs(col('var_lag')))
+            .drop('var_lag')
+        )
+
+    return dataset
+
+
+def measure_run(dataset, variable, n_periods, measure_type):
+
+    def _mean_func(x):
+        result = np.mean(x)
+        return float(result)  
+
+    def _median_func(x):
+        result = np.median(x)
+        return float(result)   
+
+    def _std_func(x):
+        result = np.std(x)
+        return float(result)
+
+    def _var_func(x):
+        
+        result = np.var(x)
+        return float(result)
+
+    def _min_func(x):
+        
+        result = np.min(x)
+        return float(result)
+
+    def _max_func(x):
+        
+        result = np.max(x)
+        return float(result)
+
     
-        # Agregations Q1, Q2 and Q3
-        df_sum = dataset_itr.groupBy(['processed_at', 'id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
-            lit(None).alias('dt_refer'),
-            lit(None).alias('dt_fim_exerc'),
-            lit(None).alias('dt_ini_exerc'),
-            lit(None).alias('dt_quarter'),
-            sum('cost_goods_and_services').alias('cost_goods_and_services'), \
-            sum('earnings_before_income_tax_and_social_contribution').alias('earnings_before_income_tax_and_social_contribution'), \
-            sum('earnings_before_interest_and_taxes').alias('earnings_before_interest_and_taxes'), \
-            sum('financial_results').alias('financial_results'), \
-            sum('groos_revenue').alias('groos_revenue'), \
-            sum('net_profit').alias('net_profit'), \
-            sum('operating_revenues_and_expenses').alias('operating_revenues_and_expenses'), \
-            sum('sales_revenue').alias('sales_revenue'))
+    if measure_type == 'mean':
+        variable_name = f'amt_avg_{variable}_{n_periods}'
+        func_udf = udf(_mean_func, DoubleType())
+    elif measure_type == 'median':
+        variable_name = f'amt_mda_{variable}_{n_periods}'
+        func_udf = udf(_median_func, DoubleType())
+    elif measure_type == 'std':
+        variable_name = f'amt_std_{variable}_{n_periods}'
+        func_udf = udf(_var_func, DoubleType())
+    elif measure_type == 'var':
+        variable_name = f'amt_var_{variable}_{n_periods}'
+        func_udf = udf(_std_func, DoubleType())
+    elif measure_type == 'min':
+        variable_name = f'amt_min_{variable}_{n_periods}'
+        func_udf = udf(_min_func, DoubleType())
+    elif measure_type == 'max':
+        variable_name = f'amt_max_{variable}_{n_periods}'
+        func_udf = udf(_max_func, DoubleType())
 
-        # Changing sinal for sumation
-        varlist = ['cost_goods_and_services', 'earnings_before_income_tax_and_social_contribution',
-        'earnings_before_interest_and_taxes', 'financial_results', 'groos_revenue',
-        'net_profit', 'operating_revenues_and_expenses', 'sales_revenue']
-        for v in varlist:
-            df_sum = df_sum.withColumn(v, -col(v))
+    windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
 
-        # Union and sum datasets
-        dataset_q4 = dataset_dfp.union(df_sum.select(dataset_dfp.columns))
-        dataset_q4 = dataset_q4.groupBy(['processed_at', 'id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
-            max('dt_refer').alias('dt_refer'), \
-            max('dt_fim_exerc').alias('dt_fim_exerc'), \
-            max('dt_ini_exerc').alias('dt_ini_exerc'), \
-            max('dt_quarter').alias('dt_quarter'), \
-            sum('cost_goods_and_services').alias('cost_goods_and_services'), \
-            sum('earnings_before_income_tax_and_social_contribution').alias('earnings_before_income_tax_and_social_contribution'), \
-            sum('earnings_before_interest_and_taxes').alias('earnings_before_interest_and_taxes'), \
-            sum('financial_results').alias('financial_results'), \
-            sum('groos_revenue').alias('groos_revenue'), \
-            sum('net_profit').alias('net_profit'), \
-            sum('operating_revenues_and_expenses').alias('operating_revenues_and_expenses'), \
-            sum('sales_revenue').alias('sales_revenue'))
+    df = (
+        dataset
+        .orderBy(['id_cvm','dt_year','dt_quarter'])
+        .groupBy('id_cvm')
+        .agg(collect_list(variable).alias('array'))
+    )
 
-        # Union with quarters datasets
-        dataset = dataset_itr.union(dataset_q4.select(dataset_itr.columns))
+    dataset = (
+        dataset
+        .withColumn('row_n', row_number().over(windowSpec))
+        .join(df, on='id_cvm', how='left')
+        .withColumn('array_slice', slice(col('array'), col('row_n'), n_periods))
+        .withColumn(variable_name, func_udf(col('array_slice')))
+        .drop(*['array', 'array_slice'])
+    )
 
-        return dataset
+    return dataset
 
 
-def _pp_union_dre():
+def measure_beta(dataset, variable, n_periods):
+
+    def _beta(x, y, deg=1):
+        try:    
+            coef = np.polyfit(x, y, deg=deg)
+            coef = coef[-1]    
+            return float(coef)
+        except:
+            return float(np.nan)
+
     
-    import os
-    from pyspark.context import SparkContext
-    from pyspark.conf import SparkConf
-    from pyspark.sql import SparkSession
-    import pyspark.sql.functions as f
-    from sparkDocuments import schema_pp_dre, DIR_S3_RAW_DFP,  DIR_S3_RAW_ITR, DIR_S3_ANALYTICAL_DRE
-    #from PreProcessing import PreProcessing
+    variable_name = f'amt_beta_{variable}_{n_periods}'
+    func_udf = udf(_beta, DoubleType())
 
-    sk = SparkSession(SparkContext(conf=SparkConf())\
-    .getOrCreate())
+    windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
+
+    df = (
+        dataset
+        .orderBy(['id_cvm','dt_year','dt_quarter'])
+        .withColumn('y_array', row_number().over(windowSpec))
+        .groupBy('id_cvm')
+        .agg(collect_list(variable).alias('x_array'), collect_list('y_array').alias('y_array'))
+    )
 
 
-    # Append _union_quarters
-    #pp = PreProcessing(spark_environment=sk)
+    dataset = (
+        dataset
+        .withColumn('row_n', row_number().over(windowSpec))
+        .join(df, on='id_cvm', how='left')
+        .withColumn('x_array_slice', slice(col('x_array'), col('row_n'), n_periods))
+        .withColumn('y_array_slice', slice(col('y_array'), col('row_n'), n_periods))
+        .withColumn(variable_name, func_udf(col('x_array_slice'), col('y_array_slice')))
+        .drop(*['row_n', 'x_array', 'x_array_slice', 'y_array', 'y_array_slice'])
+    )
 
-    dataset = sk.createDataFrame(data=sk.sparkContext.emptyRDD(),schema=schema_pp_dre)
+    return dataset
 
-    files_list = __files_list()       
-    for file in files_list:
-        dataset_itr = sk.read.parquet(os.path.join(DIR_S3_RAW_ITR, file[0]))
-        dataset_dfp = sk.read.parquet(os.path.join(DIR_S3_RAW_DFP, file[1]))
-        df = _union_quarters(dataset_itr=dataset_itr, dataset_dfp=dataset_dfp)
-        dataset = dataset.union(df)
-
-    # Saving
-    dataset.write.format('parquet') \
-        .mode('overwrite') \
-       .save(os.path.join(DIR_S3_ANALYTICAL_DRE, f'pp_dre.parquet'))  
- 
 
 if __name__ == "__main__":
-  
-    ''' 
-    parser = argparse.ArgumentParser(
-        description="Spark Pre-processing"
-    )
-    parser.add_argument("--start", required=True)
-    args = parser.parse_args()
-'''
-    _pp_union_dre()
+
+    sk = SparkSession.builder.getOrCreate()
+
+    dataset = sk.read.parquet(os.path.join(DIR_S3_ANALYTICAL_DRE, f'pp_dre_union.parquet'))
+
+
+    # Calculating Lag and percentage change
+    variable_list_lag = ['sales_revenue', 'cost_goods_and_services',
+                        'earnings_before_interest_and_taxes', 'financial_results',
+                        'net_profit']
+    for v in variable_list_lag:
+        print(f'Lag-Variable: {v}')
+        dataset = get_lag(dataset=dataset, type='amt', measure='tot', variable=v, nlag=1, period='m')
+        dataset = get_lag(dataset=dataset, type='amt', measure='tot', variable=v, nlag=4, period_text='1y')
+
+    for v in variable_list_lag:
+        print(f'Pct-Variable: {v}')
+        dataset = get_percentage_change(dataset=dataset, variable=v, nlag=1, period='m')
+        dataset = get_percentage_change(dataset=dataset, variable=v, nlag=4, period_text='1y')
+
+    # Mean Beetween rows
+    variable_list_rows = ['sales_revenue', 'cost_goods_and_services',
+                        'earnings_before_interest_and_taxes', 'financial_results',
+                        'net_profit']
+    for v in variable_list_rows:
+        print(f'Mean-Variable: {v}')
+        dataset = measure_run(dataset=dataset, variable=v, n_periods=3, measure_type='mean')
+
+    for v in variable_list_rows:
+        print(f'Std-Variable: {v}')
+        dataset = measure_run(dataset=dataset, variable=v, n_periods=3, measure_type='std')
+    '''
+    # Beta
+    variable_beta = ['sales_revenue', 'cost_goods_and_services',
+                        'earnings_before_interest_and_taxes', 'financial_results',
+                        'net_profit']
+    for v in variable_beta:
+        print(f'Beta-3-Variable: {v}')
+        dataset = measure_beta(dataset=dataset, variable=v, n_periods=3)
+    for v in variable_beta:
+        print(f'Beta-6-Variable: {v}')
+        dataset = measure_beta(dataset=dataset, variable=v, n_periods=6)
+    for v in variable_beta:
+        print(f'Beta-12-Variable: {v}')
+        dataset = measure_beta(dataset=dataset, variable=v, n_periods=12)
+    '''
+
+    # Saving
+    print('saving')
+    dataset.write.format('parquet') \
+        .mode('overwrite') \
+       .save(os.path.join(DIR_S3_ANALYTICAL_DRE, 'analytical_dre.parquet'))  
