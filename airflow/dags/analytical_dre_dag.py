@@ -28,6 +28,7 @@ with DAG(
 
 ) as dag:
 
+
     create_app = EmrServerlessCreateApplicationOperator(
         task_id='create_spark_app',
         job_type='SPARK',
@@ -37,7 +38,7 @@ with DAG(
 
     application_id = create_app.output
 
- 
+    '''
     union_datasets = EmrServerlessStartJobOperator(
         task_id='dre_union_id',
         application_id=application_id,
@@ -45,11 +46,12 @@ with DAG(
         job_driver={
             "sparkSubmit": {
                 'entryPoint':'s3://fundamentus-codes/sparkFiles/dre_union.py',
-                'sparkSubmitParameters': '--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.executor.cores=1 --conf spark.executor.memory=4g --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.instances=1',
+                'sparkSubmitParameters': '--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip',
             }
         },
         configuration_overrides=DEFAULT_MONITORING_CONFIG,
     )
+    '''
 
     pre_processing = EmrServerlessStartJobOperator(
         task_id='dre_analytical_id',
@@ -58,7 +60,7 @@ with DAG(
         job_driver={
             "sparkSubmit": {
                 'entryPoint':'s3://fundamentus-codes/sparkFiles/dre_analytical.py',
-                'sparkSubmitParameters': '--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.archives=s3://fundamentus-codes/pyspark_venv.tar.gz#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executor.cores=1 --conf spark.executor.memory=4 --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.instances=1',
+                'sparkSubmitParameters':'--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.archives=s3://fundamentus-codes/pyspark_venv.tar.gz#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executor.cores=4 --conf spark.executor.memory=8g --conf spark.executor.instances=4 --conf spark.driver.cores=2 --conf spark.driver.memory=4g',
             }
         },
         configuration_overrides=DEFAULT_MONITORING_CONFIG,

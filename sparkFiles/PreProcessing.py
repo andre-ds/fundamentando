@@ -4,7 +4,7 @@ from datetime import date
 from pyspark.sql.window import Window
 from pyspark.sql import DataFrame, udf
 from pyspark.sql.types import StructField, StructType, DateType, DoubleType, StringType, IntegerType, FloatType
-from pyspark.sql.functions import col, quarter, to_date, month, year, when, to_date, asc, months_between, round, concat, lit, regexp_replace, sum, max, lag, collect_list, slice, row_number
+from pyspark.sql.functions import col, quarter, to_date, month, year, when, to_date, asc, months_between, round, concat, lit, regexp_replace, mean, stddev, variance, sum, max, lag, collect_list, slice, row_number, abs
 from pyspark.sql.window import Window
 
 
@@ -385,109 +385,45 @@ class PreProcessing():
 
     def measure_run(self, dataset:DataFrame, variable:str, n_periods:int, measure_type:str) -> DataFrame:
 
-        import numpy as np
+        WindowSpec = Window.partitionBy(['id_cvm']).orderBy(col('dt_year'), col('dt_quarter')).rowsBetween(-n_periods, Window.currentRow)
 
-        def _mean_func(x):
-            result = np.mean(x)
-            return float(result)  
-
-        def _median_func(x):
-            result = np.median(x)
-            return float(result)   
-
-        def _std_func(x):
-            result = np.std(x)
-            return float(result)
-
-        def _var_func(x):
-            
-            result = np.var(x)
-            return float(result)
-
-        def _min_func(x):
-            
-            result = np.min(x)
-            return float(result)
-
-        def _max_func(x):
-            
-            result = np.max(x)
-            return float(result)
-
-        
         if measure_type == 'mean':
             variable_name = f'amt_avg_{variable}_{n_periods}'
-            func_udf = udf(_mean_func, DoubleType())
-        elif measure_type == 'median':
-            variable_name = f'amt_mda_{variable}_{n_periods}'
-            func_udf = udf(_median_func, DoubleType())
+            dataset = dataset.withColumn(variable_name, mean(col(variable)).over(WindowSpec))
         elif measure_type == 'std':
             variable_name = f'amt_std_{variable}_{n_periods}'
-            func_udf = udf(_var_func, DoubleType())
+            dataset = dataset.withColumn(variable_name, stddev(col(variable)).over(WindowSpec))
         elif measure_type == 'var':
             variable_name = f'amt_var_{variable}_{n_periods}'
-            func_udf = udf(_std_func, DoubleType())
+            dataset = dataset.withColumn(variable_name, variance(col(variable)).over(WindowSpec))
         elif measure_type == 'min':
             variable_name = f'amt_min_{variable}_{n_periods}'
-            func_udf = udf(_min_func, DoubleType())
+            dataset = dataset.withColumn(variable_name, min(col(variable)).over(WindowSpec))
         elif measure_type == 'max':
             variable_name = f'amt_max_{variable}_{n_periods}'
-            func_udf = udf(_max_func, DoubleType())
-
-        windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
-
-        df = (
-            dataset
-            .orderBy(['id_cvm','dt_year','dt_quarter'])
-            .groupBy('id_cvm')
-            .agg(collect_list(variable).alias('array'))
-        )
-
-        dataset = (
-            dataset
-            .withColumn('row_n', row_number().over(windowSpec))
-            .join(df, on='id_cvm', how='left')
-            .withColumn('array_slice', slice(col('array'), col('row_n'), n_periods))
-            .withColumn(variable_name, func_udf(col('array_slice')))
-            .drop(*['array', 'array_slice'])
-        )
+            dataset = dataset.withColumn(variable_name, max(col(variable)).over(WindowSpec))
 
         return dataset
 
 
-    def measure_beta(self, dataset, variable, n_periods) -> DataFrame:
+    def measure_beta(self, dataset:DataFrame, variable:str, n_periods:int) -> DataFrame:
 
-        def _beta(x, y, deg=1):
-            try:    
-                coef = np.polyfit(x, y, deg=deg)
-                coef = coef[-1]    
-                return float(coef)
-            except:
-                return float(np.nan)
+        windowSpec1  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
+        windowSpec2 = Window.partitionBy(['id_cvm']).orderBy(['dt_year','dt_quarter']).rowsBetween(-n_periods, Window.currentRow)
 
-        
-        variable_name = f'amt_beta_{variable}_{n_periods}'
-        func_udf = udf(_beta, DoubleType())
-
-        windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
-
-        df = (
-            dataset
-            .orderBy(['id_cvm','dt_year','dt_quarter'])
-            .withColumn('y_array', row_number().over(windowSpec))
-            .groupBy('id_cvm')
-            .agg(collect_list(variable).alias('x_array'), collect_list('y_array').alias('y_array'))
-        )
-
+        variable_name = f'amt_beta_{variable}_{n_periods+1}'
 
         dataset = (
             dataset
-            .withColumn('row_n', row_number().over(windowSpec))
-            .join(df, on='id_cvm', how='left')
-            .withColumn('x_array_slice', slice(col('x_array'), col('row_n'), n_periods))
-            .withColumn('y_array_slice', slice(col('y_array'), col('row_n'), n_periods))
-            .withColumn(variable_name, func_udf(col('x_array_slice'), col('y_array_slice')))
-            .drop(*['row_n', 'x_array', 'x_array_slice', 'y_array', 'y_array_slice'])
+            .withColumn('y', lag(variable, 1).over(windowSpec1))
+            .withColumn('y_mean', mean(col('y')).over(windowSpec2))
+            .withColumn('y_y_mean', col(variable)-col('y_mean'))
+            .withColumn('x_mean', mean(col(variable)).over(windowSpec2))
+            .withColumn('x_x_mean', col(variable)-col('x_mean'))
+            .withColumn('num', col('x_x_mean')*col('y_y_mean'))
+            .withColumn('den', col('x_x_mean')*col('x_x_mean'))
+            .withColumn(variable_name, col('num')/col('den'))
+            .drop('y', 'y_mean', 'y_y_mean', 'x_mean', 'x_x_mean', 'num', 'den')
         )
 
         return dataset
