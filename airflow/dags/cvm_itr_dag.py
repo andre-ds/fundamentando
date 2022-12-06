@@ -8,7 +8,6 @@ from airflow.operators.python import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 
 
-
 EXECUTION_DATE = '{{ ds }}'
 
 with DAG(

@@ -1,5 +1,27 @@
 
 
+def download_bucket_s3(s3, bucket, path):
+    
+    import os
+    import boto3
+
+    def _get_objects(s3, response, bucket, path):
+        for i in response['Contents']:
+            source = i['Key']
+            destination = os.path.join(path, source)
+            if not os.path.exists(os.path.dirname(destination)):
+                os.makedirs(os.path.dirname(destination))
+            s3.download_file(Bucket=bucket,Key=source, Filename=destination)
+
+    
+    response = s3.list_objects_v2(Bucket=bucket)
+    _get_objects(s3=s3,response=response, bucket=bucket, path=path)
+    while response.get('IsTruncated'):
+        TOKEN = response.get('NextContinuationToken')
+        response = s3.list_objects_v2(Bucket=bucket, ContinuationToken=TOKEN)
+        _get_objects(s3=s3, response=response, bucket=bucket, path=path)
+
+
 def get_stock_symbols(restrictions):
 
     import investpy
@@ -109,7 +131,7 @@ def load_bucket(ti, bucket, dataType, execution_date):
                 DIR_PATH, f'{file}'), bucket_name=bucket, key=f'{file}', replace=True)
 
 
-    def __load_pp_cvm_dfp_itr(DIR_PATH, dataType):
+    def __load_pp_dfp_itr(DIR_PATH, dataType):
 
         folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
 
@@ -122,6 +144,19 @@ def load_bucket(ti, bucket, dataType, execution_date):
             except:
                 print('Is not a folder!')
 
+
+    def __load_stock(DIR_PATH):
+
+        folder_list = os.listdir(DIR_PATH)
+
+        for folder in folder_list:
+            try:
+                DIR_PATH_FILE = os.path.join(DIR_PATH, folder)
+                files_list = [file for file in os.listdir(DIR_PATH_FILE)]
+                for file in files_list:
+                    hook.load_file(filename=f'{DIR_PATH_FILE}/{file}', bucket_name=bucket, key=f'{folder}/{file}', replace=True)
+            except:
+                print('Is not a folder!')
 
 
     hook = S3Hook('s3_conn')
@@ -148,25 +183,17 @@ def load_bucket(ti, bucket, dataType, execution_date):
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW', task_ids='path_environment')
 
         dataType = f'extracted_{extract_at}_stock.parquet'
-        folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
-        for folder in folder_list:
-            try:
-                DIR_PATH_FILE = os.path.join(DIR_PATH, folder)
-                files_list = [file for file in os.listdir(DIR_PATH_FILE)]
-                for file in files_list:
-                    hook.load_file(filename=f'{DIR_PATH_FILE}/{file}', bucket_name=bucket, key=f'{folder}/{file}', replace=True)
-            except:
-                print('Is not a folder!')
+        __load_stock(DIR_PATH=DIR_PATH)
 
     elif dataType == 'pre-processed-dfp':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_DFP', task_ids='path_environment')
         dataType = 'dfp'
-        __load_pp_cvm_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
+        __load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
     elif dataType == 'pre-processed-itr':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_ITR', task_ids='path_environment')
         dataType = 'itr'
-        __load_pp_cvm_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
+        __load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
 '''
     def __load_pp_cvm_dfp_itr(DIR_PATH, dataType):
