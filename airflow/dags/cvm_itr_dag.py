@@ -30,7 +30,8 @@ with DAG(
         op_kwargs={
             'bucket': 'fundamentus-raw-itr',
             'dataType': 'raw-itr',
-            'execution_date': EXECUTION_DATE
+            'execution_date': EXECUTION_DATE,
+            'delete':False,
         }
     )
 
@@ -52,7 +53,8 @@ with DAG(
         op_kwargs={
             'bucket': 'fundamentus-pre-processed-itr',
             'dataType': 'pre-processed-itr',
-            'execution_date': EXECUTION_DATE
+            'execution_date': EXECUTION_DATE,
+            'delete':True,
         }
     )
 

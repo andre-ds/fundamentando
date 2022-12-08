@@ -62,6 +62,8 @@ def path_environment(ti):
         os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed-dfp'))
     if 'pre-processed-itr' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed-itr'))
+    if 'pre-processed-stock' not in list_folders:
+        os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed-stock'))
     if 'analytical' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'analytical'))
 
@@ -72,6 +74,7 @@ def path_environment(ti):
 
     DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
     DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
+    DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
 
     ti.xcom_push(key='DIR_PATH', value=DIR_PATH)
     # Raw folders
@@ -82,6 +85,7 @@ def path_environment(ti):
     # Pre-processed folders
     ti.xcom_push(key='DIR_PATH_PROCESSED_DFP', value=DIR_PATH_PROCESSED_DFP)
     ti.xcom_push(key='DIR_PATH_PROCESSED_ITR', value=DIR_PATH_PROCESSED_ITR)
+    ti.xcom_push(key='DIR_PATH_PROCESSED_STOCK', value=DIR_PATH_PROCESSED_STOCK)
 
 
 def unzippded_files(ti, dataType):
@@ -109,8 +113,16 @@ def unzippded_files(ti, dataType):
                 zip_ref.extractall(DIR_PATH_RAW)
         except:
             print('Error unzip')
-            
-def load_bucket(ti, bucket, dataType, execution_date):
+
+def delete_objects(bucket, prefix):
+    
+    from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+
+    hook = S3Hook('s3_conn')
+    hook.list_keys(bucket_name=bucket, prefix=prefix)
+
+
+def load_bucket(ti, bucket, dataType, execution_date, delete=None):
 
     import os
     import re
@@ -145,11 +157,14 @@ def load_bucket(ti, bucket, dataType, execution_date):
                 print('Is not a folder!')
 
 
-    def __load_stock(DIR_PATH):
+    def __load_pp(DIR_PATH, dataType, delete):
 
-        folder_list = os.listdir(DIR_PATH)
+        folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
 
         for folder in folder_list:
+            if delete:
+                delete_folder = hook.list_keys(bucket_name=bucket, prefix=folder)
+                hook.delete_objects(bucket=bucket, keys=delete_folder)
             try:
                 DIR_PATH_FILE = os.path.join(DIR_PATH, folder)
                 files_list = [file for file in os.listdir(DIR_PATH_FILE)]
@@ -157,6 +172,27 @@ def load_bucket(ti, bucket, dataType, execution_date):
                     hook.load_file(filename=f'{DIR_PATH_FILE}/{file}', bucket_name=bucket, key=f'{folder}/{file}', replace=True)
             except:
                 print('Is not a folder!')
+
+    def __load_pp_partition(DIR_PATH, dataType):
+
+        isthere = hook.list_keys(bucket_name=bucket, prefix=dataType)
+        DIR_PATH = os.path.join(DIR_PATH, dataType)
+        partition_folders = [file for file in os.listdir(DIR_PATH)]
+
+        print('Inicio do Loop')
+        print(partition_folders)
+        for folder in partition_folders:
+            print(folder)
+            if folder not in isthere:
+                if os.path.isdir(os.path.join(DIR_PATH, folder)):
+                    DIR_PATH_PARTITION = os.path.join(DIR_PATH, folder)
+                    print(DIR_PATH_PARTITION)
+                    partition_files = [file for file in os.listdir(DIR_PATH_PARTITION)]
+                    print(partition_files)
+                    for file in partition_files:
+                        hook.load_file(filename=f'{DIR_PATH_PARTITION}/{file}', bucket_name=bucket, key=f'pp_stock_union.parquet/{folder}/{file}', replace=True)
+                else:
+                    hook.load_file(filename=f'{DIR_PATH_PARTITION}/{file}', bucket_name=bucket, key=f'pp_stock_union.parquet/{file}', replace=True)
 
 
     hook = S3Hook('s3_conn')
@@ -166,34 +202,56 @@ def load_bucket(ti, bucket, dataType, execution_date):
     if dataType == 'registration':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_REGISTRATION', task_ids='path_environment')
         dataType = f'extracted_{extract_at}_cad_cia_aberta.csv'
-        __load_raw_registration(DIR_PATH=DIR_PATH, dataType=dataType)
-
+        __load_raw_registration(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
     elif dataType == 'raw-dfp':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_DFP', task_ids='path_environment')
         dataType = f'extracted_{extract_at}_dfp_cia_aberta'
-        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
+        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
     elif dataType == 'raw-itr':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_ITR', task_ids='path_environment')
         dataType = f'extracted_{extract_at}_itr_cia_aberta'
-        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
+        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
     elif dataType == 'raw-stock':
-        DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW', task_ids='path_environment')
-
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_STOCK', task_ids='path_environment')
         dataType = f'extracted_{extract_at}_stock.parquet'
-        __load_stock(DIR_PATH=DIR_PATH)
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
     elif dataType == 'pre-processed-dfp':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_DFP', task_ids='path_environment')
         dataType = 'dfp'
-        __load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+        #__load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
     elif dataType == 'pre-processed-itr':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_ITR', task_ids='path_environment')
         dataType = 'itr'
-        __load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+       # __load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
+
+    elif dataType == 'pre-processed-stock':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_STOCK', task_ids='path_environment')
+        dataType = f'pp_stock_union.parquet'
+        #__load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+        __load_pp_partition(DIR_PATH=DIR_PATH, dataType=dataType)
+
+
+def download_s3(ti, bucket_name, key, dataType):
+
+    from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+
+    hook = S3Hook('s3_conn')
+
+    if dataType == 'pre-processed-stock':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_STOCK', task_ids='path_environment')
+    
+    try:
+        hook.download_file(key=key, bucket_name=bucket_name, local_path=DIR_PATH)
+    except:
+        print('There is no file.')
+
 
 '''
     def __load_pp_cvm_dfp_itr(DIR_PATH, dataType):

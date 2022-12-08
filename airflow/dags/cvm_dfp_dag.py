@@ -31,7 +31,8 @@ with DAG(
         op_kwargs={
             'bucket': 'fundamentus-raw-dfp',
             'dataType': 'raw-dfp',
-            'execution_date': EXECUTION_DATE
+            'execution_date': EXECUTION_DATE,
+            'delete':False,
         }
     )
 
@@ -53,7 +54,8 @@ with DAG(
         op_kwargs={
             'bucket': 'fundamentus-pre-processed-dfp',
             'dataType': 'pre-processed-dfp',
-            'execution_date': EXECUTION_DATE
+            'execution_date': EXECUTION_DATE,
+            'delete':True,
         }
     )
 

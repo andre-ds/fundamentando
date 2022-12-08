@@ -4,7 +4,7 @@ from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
-from utils.Utils import load_bucket
+from utils.Utils import load_bucket, download_s3
 
 
 EXECUTION_DATE = '{{ ds }}'
@@ -12,7 +12,7 @@ EXECUTION_DATE = '{{ ds }}'
 
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2022, 10, 1),
+    start_date=datetime(2022, 12, 1),
     schedule_interval='10 18 * * 1-5',
     catchup=True
 ) as dag:
@@ -35,11 +35,30 @@ with DAG(
         task_id='upload_s3_raw_ticker_id',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket':'stock-fundamentus-raw',
+            'bucket':'fundamentus-raw-stock',
             'dataType':'raw-stock',
-            'execution_date':EXECUTION_DATE
+            'execution_date':EXECUTION_DATE,
+            'delete':True,
         }
     )
 
+    union_stocks = SparkSubmitOperator(
+        task_id=f'union_stocks_id',
+        conn_id='spark',
+        application='/opt/sparkFiles/union_stocks.py',
+        name='union_stocks_',
+        application_args=[
+        '--execution_date', EXECUTION_DATE]
+    )
 
-environment >> stock_extraction >> upload_s3_raw_ticker
+    upload_s3_union = PythonOperator(
+        task_id='upload_s3_union_id',
+        python_callable=load_bucket,
+        op_kwargs={
+            'bucket':'fundamentus-pre-processed-stock',
+            'dataType':'pre-processed-stock',
+            'execution_date':EXECUTION_DATE,
+        }
+    )
+
+environment >> stock_extraction >> upload_s3_raw_ticker >> union_stocks >> upload_s3_union

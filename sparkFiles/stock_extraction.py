@@ -11,7 +11,7 @@ def get_stock_information(ticker_list, start, end=None):
     from pyspark.conf import SparkConf
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import to_date, col, lit
-    from sparkDocuments import schema_ticker, DIR_PATH_RAW_STOCK
+    from sparkDocuments import DIR_PATH_RAW_STOCK, DIR_PATH_PROCESSED_STOCK
     
     def _get_end(start):
 
@@ -45,7 +45,8 @@ def get_stock_information(ticker_list, start, end=None):
     dataset.write.format('parquet') \
         .mode('overwrite') \
        .save(os.path.join(DIR_PATH_RAW_STOCK, f'extracted_{extract_at}_stock.parquet'))  
- 
+
+
 if __name__ == "__main__":
   
     parser = argparse.ArgumentParser(
