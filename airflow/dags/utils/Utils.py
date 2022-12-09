@@ -184,15 +184,15 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
         for folder in partition_folders:
             print(folder)
             if folder not in isthere:
+                DIR_PATH_PARTITION = os.path.join(DIR_PATH, folder)
                 if os.path.isdir(os.path.join(DIR_PATH, folder)):
-                    DIR_PATH_PARTITION = os.path.join(DIR_PATH, folder)
                     print(DIR_PATH_PARTITION)
                     partition_files = [file for file in os.listdir(DIR_PATH_PARTITION)]
                     print(partition_files)
                     for file in partition_files:
                         hook.load_file(filename=f'{DIR_PATH_PARTITION}/{file}', bucket_name=bucket, key=f'pp_stock_union.parquet/{folder}/{file}', replace=True)
                 else:
-                    hook.load_file(filename=f'{DIR_PATH_PARTITION}/{file}', bucket_name=bucket, key=f'pp_stock_union.parquet/{file}', replace=True)
+                    hook.load_file(filename=f'{DIR_PATH_PARTITION}', bucket_name=bucket, key=f'pp_stock_union.parquet/{folder}', replace=True)
 
 
     hook = S3Hook('s3_conn')

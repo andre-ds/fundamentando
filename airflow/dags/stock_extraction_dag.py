@@ -12,7 +12,7 @@ EXECUTION_DATE = '{{ ds }}'
 
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2022, 12, 1),
+    start_date=datetime(2022, 1, 1),
     schedule_interval='10 18 * * 1-5',
     catchup=True
 ) as dag:

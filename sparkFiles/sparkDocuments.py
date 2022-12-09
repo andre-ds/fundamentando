@@ -100,13 +100,15 @@ schema_ticker = StructType([
 
 schema_ticker = StructType([
     StructField('ticker', StringType(), True),
-    StructField('date', DateType(), True),
+    StructField('date', StringType(), True),
     StructField('open', FloatType(), True),
     StructField('high', FloatType(), True),
     StructField('low', FloatType(), True),
     StructField('close', FloatType(), True),
     StructField('adj_close', FloatType(), True),
-    StructField('volume', IntegerType(), True)
+    StructField('volume', IntegerType(), True),
+    StructField('dividends', IntegerType(), True),
+    StructField('stock_splits', IntegerType(), True)
 ])
 
 # Create an empty RDD with empty schema

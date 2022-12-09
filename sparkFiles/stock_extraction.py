@@ -11,7 +11,8 @@ def get_stock_information(ticker_list, start, end=None):
     from pyspark.conf import SparkConf
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import to_date, col, lit
-    from sparkDocuments import DIR_PATH_RAW_STOCK, DIR_PATH_PROCESSED_STOCK
+    from pyspark.sql.types import IntegerType, FloatType
+    from sparkDocuments import DIR_PATH_RAW_STOCK, schema_ticker
     
     def _get_end(start):
 
@@ -28,15 +29,37 @@ def get_stock_information(ticker_list, start, end=None):
         end = _get_end(start=start)
 
     try:
-        varlist = ['date', 'ticker', 'adj_close', 'close', 'high', 'low', 'open', 'volume']
-        dataset = yf.download(ticker_list, start=start, end=end)
+        dataset = yf.download(ticker_list, start=start, end=end,  actions=True)
         dataset = dataset.stack().reset_index()
-        dataset.columns = varlist
+        dataset.rename(columns={
+            'Date':'date',
+            'level_1':'ticker',
+            'Adj Close':'adj_close',
+            'Close':'close',
+            'Dividends':'dividends',
+            'High':'high',
+            'Low':'low',
+            'Open':'open',
+            'Stock Splits':'stock_splits',
+            'Volume':'volume'   
+        }, inplace=True)
         dataset['date']=dataset['date'].astype(str)
         if dataset.empty:
             raise Exception
-        dataset = sk.createDataFrame(dataset)
-        dataset = dataset.filter(col('date') == start)
+        dataset = sk.createDataFrame(data=dataset)
+        dataset = (
+            dataset
+            .filter(col('date') == start)
+            .withColumn('date', to_date(col('date'), 'yyyy-MM-dd'))
+            .withColumn('adj_close', col('adj_close').cast(FloatType()))
+            .withColumn('close', col('close').cast(FloatType()))
+            .withColumn('high', col('high').cast(FloatType()))
+            .withColumn('low', col('low').cast(FloatType()))
+            .withColumn('open', col('open').cast(FloatType()))
+            .withColumn('volume', col('volume').cast(FloatType()))
+            .withColumn('dividends', col('dividends').cast(IntegerType()))
+            .withColumn('stock_splits', col('stock_splits').cast(IntegerType()))
+            )
     except:
             print('No data found, symbol may be delisted')
 

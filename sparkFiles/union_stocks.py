@@ -16,11 +16,11 @@ def union_stock(execution_date):
     dataset = sk.read.parquet(os.path.join(DIR_PATH_RAW_STOCK, filename))
 
     # Pre-processing
-
     dataset = (
         dataset
         .orderBy(col('date'))
         .dropDuplicates()
+        .select('date', 'ticker', 'adj_close', 'close', 'dividends', 'high', 'low', 'open', 'stock_splits', 'volume')
     )
     # Append Dataset
     dataset.write.format('parquet') \
