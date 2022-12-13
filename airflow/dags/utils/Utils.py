@@ -207,12 +207,12 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
     elif dataType == 'raw-dfp':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_DFP', task_ids='path_environment')
         dataType = f'extracted_{extract_at}_dfp_cia_aberta'
-        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
     elif dataType == 'raw-itr':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_ITR', task_ids='path_environment')
         dataType = f'extracted_{extract_at}_itr_cia_aberta'
-        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+        __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
     elif dataType == 'raw-stock':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_STOCK', task_ids='path_environment')

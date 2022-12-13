@@ -1,12 +1,13 @@
 import argparse
-from operator import index
 
 
-def get_stock_information(ticker_list, start, end=None):
+def get_stock_information(start, end=None):
     
     import os
     from datetime import datetime, timedelta
+    import investpy
     import yfinance as yf
+    import pandas as pd
     from pyspark.context import SparkContext
     from pyspark.conf import SparkConf
     from pyspark.sql import SparkSession
@@ -28,6 +29,17 @@ def get_stock_information(ticker_list, start, end=None):
     if end is None:
         end = _get_end(start=start)
 
+    
+    # Stocks investpy
+    dataset_stocks = investpy.get_stocks(country='brazil')
+
+    dataset_stocks.rename(columns={
+        'symbol':'ticker',
+        'isin':'id_isin'}, inplace=True)
+    dataset_stocks['ticker'] = dataset_stocks['ticker'] + '.SA'
+    dataset_stocks = dataset_stocks[['ticker', 'id_isin']]
+    ticker_list = dataset_stocks['ticker'].to_list()
+    print('chegou 1')
     try:
         dataset = yf.download(ticker_list, start=start, end=end,  actions=True)
         dataset = dataset.stack().reset_index()
@@ -44,6 +56,14 @@ def get_stock_information(ticker_list, start, end=None):
             'Volume':'volume'   
         }, inplace=True)
         dataset['date']=dataset['date'].astype(str)
+        print('chegou 2')
+        dataset = pd.merge(dataset, dataset_stocks, on='ticker', how='left')
+        print('chegou 3')
+        variables = ['date', 'id_isin', 'ticker', 'adj_close',
+                    'close', 'dividends', 'high', 'low',
+                    'open', 'stock_splits', 'volume']
+        dataset = dataset[variables]
+        print('chegou 4')
         if dataset.empty:
             raise Exception
         dataset = sk.createDataFrame(data=dataset)
@@ -64,6 +84,7 @@ def get_stock_information(ticker_list, start, end=None):
             print('No data found, symbol may be delisted')
 
     # Saving
+    print('chegou 4')
     extract_at = start.replace('-', '_')
     dataset.write.format('parquet') \
         .mode('overwrite') \
@@ -77,6 +98,5 @@ if __name__ == "__main__":
     )
     parser.add_argument("--start", required=True)
     args = parser.parse_args()
-
-    from sparkDocuments import ticker_list
-    get_stock_information(ticker_list=ticker_list, start=args.start)
+ 
+    get_stock_information(start=args.start)

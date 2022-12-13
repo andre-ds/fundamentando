@@ -32,7 +32,6 @@ with DAG(
             'bucket': 'fundamentus-raw-dfp',
             'dataType': 'raw-dfp',
             'execution_date': EXECUTION_DATE,
-            'delete':False,
         }
     )
 

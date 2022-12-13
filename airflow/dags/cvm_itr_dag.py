@@ -31,7 +31,6 @@ with DAG(
             'bucket': 'fundamentus-raw-itr',
             'dataType': 'raw-itr',
             'execution_date': EXECUTION_DATE,
-            'delete':False,
         }
     )
 

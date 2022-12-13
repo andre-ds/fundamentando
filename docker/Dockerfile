@@ -56,7 +56,8 @@ RUN pip install apache-airflow[aws,spark,postgres]==${AIRFLOW_VERSION}
 
 # Install Data Science packages
 RUN pip install pandas \
-    && pip install yfinance
+    && pip install yfinance \
+    && pip install investpy
 
 # Install Postgres
 #RUN apt install postgresql postgresql-contrib -yqq \

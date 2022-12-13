@@ -9,10 +9,9 @@ from utils.Utils import load_bucket, download_s3
 
 EXECUTION_DATE = '{{ ds }}'
 
-
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2022, 1, 1),
+    start_date=datetime(2022, 12, 7),
     schedule_interval='10 18 * * 1-5',
     catchup=True
 ) as dag:
