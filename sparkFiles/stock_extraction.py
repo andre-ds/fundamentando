@@ -1,7 +1,7 @@
 import argparse
 
 
-def get_stock_information(start, end=None):
+def get_stock_information(ticker_list, start, end=None):
     
     import os
     from datetime import datetime, timedelta
@@ -13,7 +13,7 @@ def get_stock_information(start, end=None):
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import to_date, col, lit
     from pyspark.sql.types import IntegerType, FloatType
-    from sparkDocuments import DIR_PATH_RAW_STOCK, schema_ticker
+    from sparkDocuments import PATH_DATALAKE, DIR_PATH_RAW_STOCK, schema_ticker
     
     def _get_end(start):
 
@@ -29,17 +29,23 @@ def get_stock_information(start, end=None):
     if end is None:
         end = _get_end(start=start)
 
-    
     # Stocks investpy
-    dataset_stocks = investpy.get_stocks(country='brazil')
-
-    dataset_stocks.rename(columns={
-        'symbol':'ticker',
-        'isin':'id_isin'}, inplace=True)
-    dataset_stocks['ticker'] = dataset_stocks['ticker'] + '.SA'
-    dataset_stocks = dataset_stocks[['ticker', 'id_isin']]
-    ticker_list = dataset_stocks['ticker'].to_list()
-    print('chegou 1')
+    if ticker_list=='API':
+        dataset_stocks = investpy.get_stocks(country='brazil')
+        dataset_stocks.rename(columns={
+            'symbol':'ticker',
+            'isin':'id_isin'}, inplace=True)
+        dataset_stocks['ticker'] = dataset_stocks['ticker'] + '.SA'
+        dataset_stocks = dataset_stocks[['ticker', 'id_isin']]
+        ticker_list = dataset_stocks['ticker'].to_list()
+    elif ticker_list=='file':
+        dtype={
+                'id_isin':'object',
+                'ticker':'object',
+                'id_cnpj':'object'
+            }
+        dataset_stocks = pd.read_csv(os.path.join(PATH_DATALAKE, 'register_2022-12-13.csv'), dtype=dtype)
+        ticker_list = dataset_stocks['ticker'].to_list()
     try:
         dataset = yf.download(ticker_list, start=start, end=end,  actions=True)
         dataset = dataset.stack().reset_index()
@@ -56,14 +62,12 @@ def get_stock_information(start, end=None):
             'Volume':'volume'   
         }, inplace=True)
         dataset['date']=dataset['date'].astype(str)
-        print('chegou 2')
         dataset = pd.merge(dataset, dataset_stocks, on='ticker', how='left')
-        print('chegou 3')
-        variables = ['date', 'id_isin', 'ticker', 'adj_close',
+        print(dataset.columns)
+        variables = ['date', 'id_isin', 'id_cnpj', 'ticker', 'adj_close',
                     'close', 'dividends', 'high', 'low',
                     'open', 'stock_splits', 'volume']
         dataset = dataset[variables]
-        print('chegou 4')
         if dataset.empty:
             raise Exception
         dataset = sk.createDataFrame(data=dataset)
@@ -84,7 +88,6 @@ def get_stock_information(start, end=None):
             print('No data found, symbol may be delisted')
 
     # Saving
-    print('chegou 4')
     extract_at = start.replace('-', '_')
     dataset.write.format('parquet') \
         .mode('overwrite') \
@@ -96,7 +99,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Spark Pre-processing"
     )
+    parser.add_argument("--ticker_list", required=True)
     parser.add_argument("--start", required=True)
     args = parser.parse_args()
  
-    get_stock_information(start=args.start)
+    get_stock_information(ticker_list=args.ticker_list ,start=args.start)

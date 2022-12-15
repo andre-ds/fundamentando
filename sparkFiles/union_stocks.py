@@ -20,7 +20,7 @@ def union_stock(execution_date):
         dataset
         .orderBy(col('date'))
         .dropDuplicates()
-        .select('date', 'id_isin', 'ticker', 'adj_close', 'close', 'dividends', 'high', 'low', 'open', 'stock_splits', 'volume')
+        .select('date', 'id_isin', 'id_cnpj', 'ticker', 'adj_close', 'close', 'dividends', 'high', 'low', 'open', 'stock_splits', 'volume')
     )
     # Append Dataset
     dataset.write.format('parquet') \

@@ -6,12 +6,12 @@ from airflow.operators.python import PythonOperator
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from utils.Utils import load_bucket, download_s3
 
-
 EXECUTION_DATE = '{{ ds }}'
+
 
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2022, 12, 7),
+    start_date=datetime(2022, 1, 1),
     schedule_interval='10 18 * * 1-5',
     catchup=True
 ) as dag:
@@ -27,7 +27,8 @@ with DAG(
         application='/opt/sparkFiles/stock_extraction.py',
         name='stock_extraction_',
         application_args=[
-        '--start', EXECUTION_DATE]
+        '--ticker_list', 'file',
+        '--start', EXECUTION_DATE,]
     )
 
     upload_s3_raw_ticker = PythonOperator(
