@@ -76,6 +76,8 @@ def path_environment(ti):
     DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
     DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
 
+    DIR_PATH_ANALYTICAL= os.path.join(PATH_DATALAKE, 'analytical')
+
     ti.xcom_push(key='DIR_PATH', value=DIR_PATH)
     # Raw folders
     ti.xcom_push(key='DIR_PATH_RAW_STOCK', value=DIR_PATH_RAW_STOCK)
@@ -86,6 +88,8 @@ def path_environment(ti):
     ti.xcom_push(key='DIR_PATH_PROCESSED_DFP', value=DIR_PATH_PROCESSED_DFP)
     ti.xcom_push(key='DIR_PATH_PROCESSED_ITR', value=DIR_PATH_PROCESSED_ITR)
     ti.xcom_push(key='DIR_PATH_PROCESSED_STOCK', value=DIR_PATH_PROCESSED_STOCK)
+    # Analytical
+    ti.xcom_push(key='DIR_PATH_ANALYTICAL', value=DIR_PATH_ANALYTICAL)    
 
 
 def unzippded_files(ti, dataType):
@@ -234,8 +238,8 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
     elif dataType == 'pre-processed-stock':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_STOCK', task_ids='path_environment')
         dataType = f'pp_stock_union.parquet'
-        #__load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
-        __load_pp_partition(DIR_PATH=DIR_PATH, dataType=dataType)
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+        #__load_pp_partition(DIR_PATH=DIR_PATH, dataType=dataType)
 
 
 def download_s3(ti, bucket_name, key, dataType):

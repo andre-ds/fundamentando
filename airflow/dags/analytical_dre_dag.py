@@ -33,7 +33,7 @@ with DAG(
         task_id='create_spark_app',
         job_type='SPARK',
         release_label='emr-6.8.0',
-        config={'name': 'airflow-test'},
+        config={'name': 'airflow-analytical-dre'},
     )
 
     application_id = create_app.output
@@ -60,7 +60,7 @@ with DAG(
         job_driver={
             "sparkSubmit": {
                 'entryPoint':'s3://fundamentus-codes/sparkFiles/dre_analytical.py',
-                'sparkSubmitParameters':'--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.archives=s3://fundamentus-codes/pyspark_venv.tar.gz#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executor.cores=4 --conf spark.executor.memory=8g --conf spark.executor.instances=4 --conf spark.driver.cores=2 --conf spark.driver.memory=4g',
+                'sparkSubmitParameters':'--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.archives=s3://fundamentus-codes/pyspark_venv.tar.gz#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executor.cores=4 --conf spark.executor.memory=8g --conf spark.executor.instances=4 --conf spark.driver.cores=2 --conf spark.driver.memory=4g'
             }
         },
         configuration_overrides=DEFAULT_MONITORING_CONFIG,

@@ -15,7 +15,7 @@ def _pp_union_dre():
     
     import os
     from pyspark.sql import SparkSession
-    from sparkDocuments import schema_pp_dre, DIR_S3_RAW_DFP,  DIR_S3_RAW_ITR, DIR_S3_ANALYTICAL_DRE
+    from sparkDocuments import schema_pp_dre, DIR_S3_RAW_DFP,  DIR_S3_RAW_ITR, DIR_S3_ANALYTICAL
     from PreProcessing import PreProcessing
   
     sk = SparkSession.builder.getOrCreate()
@@ -37,7 +37,7 @@ def _pp_union_dre():
     print('saving')
     dataset.write.format('parquet') \
         .mode('overwrite') \
-       .save(os.path.join(DIR_S3_ANALYTICAL_DRE, 'pp_dre_union.parquet'))  
+       .save(os.path.join(DIR_S3_ANALYTICAL, 'pp_dre_union.parquet'))  
  
 
 if __name__ == "__main__":

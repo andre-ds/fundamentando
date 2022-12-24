@@ -24,9 +24,8 @@ def union_stock(execution_date):
     )
     # Append Dataset
     dataset.write.format('parquet') \
-            .partitionBy('date') \
             .mode('append') \
-        .save(os.path.join(DIR_PATH_PROCESSED_STOCK, f'pp_stock_union.parquet'))  
+            .save(os.path.join(DIR_PATH_PROCESSED_STOCK, f'pp_stock_union.parquet'))  
 
 
 if __name__ == "__main__":

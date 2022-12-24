@@ -4,7 +4,7 @@ from datetime import date
 from pyspark.sql.window import Window
 from pyspark.sql import DataFrame, udf
 from pyspark.sql.types import StructField, StructType, DateType, DoubleType, StringType, IntegerType, FloatType
-from pyspark.sql.functions import col, quarter, to_date, month, year, when, to_date, asc, months_between, round, concat, lit, regexp_replace, mean, stddev, variance, sum, max, lag, collect_list, slice, row_number, abs
+from pyspark.sql.functions import col, quarter, to_date, month, year, when, to_date, asc, months_between, round, concat, lit, regexp_replace, mean, stddev, variance, sum, min, max, lag, collect_list, slice, row_number, abs
 from pyspark.sql.window import Window
 
 
@@ -349,9 +349,9 @@ class PreProcessing():
                     _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
 
 
-    def get_lag(self, dataset:DataFrame, type:str, measure:str, variable:str, nlag:int, period:int=None, period_text:str=None) -> DataFrame:
+    def get_lag(self, dataset:DataFrame, partition_var:list, order_var:list, type:str, measure:str, variable:str, nlag:int, period:int=None, period_text:str=None) -> DataFrame:
 
-        windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
+        windowSpec  = Window.partitionBy(partition_var).orderBy(order_var)
 
         if period_text is not None:
             dataset = dataset.withColumn(f'{type}_{measure}_{variable}_{period_text}_lag',lag(variable, nlag).over(windowSpec))
@@ -361,9 +361,9 @@ class PreProcessing():
         return dataset
 
 
-    def get_percentage_change(self, dataset:DataFrame, variable:str, nlag:int, period:int=None, period_text:str=None):
+    def get_percentage_change(self, dataset:DataFrame, partition_var:list, order_var:list, variable:str, nlag:int, period:int=None, period_text:str=None):
 
-        windowSpec  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
+        windowSpec  = Window.partitionBy(partition_var).orderBy(order_var)
     
         if period_text is not None:
             dataset = (
@@ -383,9 +383,9 @@ class PreProcessing():
         return dataset
 
 
-    def measure_run(self, dataset:DataFrame, variable:str, n_periods:int, measure_type:str) -> DataFrame:
+    def measure_run(self, dataset:DataFrame, partition_var:list, order_var:list, variable:str, n_periods:int, measure_type:str) -> DataFrame:
 
-        WindowSpec = Window.partitionBy(['id_cvm']).orderBy(col('dt_year'), col('dt_quarter')).rowsBetween(-n_periods, Window.currentRow)
+        WindowSpec = Window.partitionBy(partition_var).orderBy(order_var).rowsBetween(-n_periods, Window.currentRow)
 
         if measure_type == 'mean':
             variable_name = f'amt_avg_{variable}_{n_periods}'
@@ -406,10 +406,10 @@ class PreProcessing():
         return dataset
 
 
-    def measure_beta(self, dataset:DataFrame, variable:str, n_periods:int) -> DataFrame:
+    def measure_beta(self, dataset:DataFrame, partition_var:list, order_var:list, variable:str, n_periods:int) -> DataFrame:
 
-        windowSpec1  = Window.partitionBy('id_cvm').orderBy(['dt_year','dt_quarter'])
-        windowSpec2 = Window.partitionBy(['id_cvm']).orderBy(['dt_year','dt_quarter']).rowsBetween(-n_periods, Window.currentRow)
+        windowSpec1  = Window.partitionBy(partition_var).orderBy(order_var)
+        windowSpec2 = Window.partitionBy(partition_var).orderBy(order_var).rowsBetween(-n_periods, Window.currentRow)
 
         variable_name = f'amt_beta_{variable}_{n_periods+1}'
 
@@ -424,6 +424,53 @@ class PreProcessing():
             .withColumn('den', col('x_x_mean')*col('x_x_mean'))
             .withColumn(variable_name, col('num')/col('den'))
             .drop('y', 'y_mean', 'y_y_mean', 'x_mean', 'x_x_mean', 'num', 'den')
+        )
+
+        return dataset
+
+
+    def broken_stock_high(self, dataset:DataFrame, variable:str, partition_variables:list, order_variables:list, n_periods:int) -> DataFrame:
+
+        WindowSpec = Window.partitionBy(partition_variables).orderBy(order_variables).rowsBetween(-n_periods, -1)
+
+        dataset = (
+            dataset
+            .withColumn('max', max(col(variable)).over(WindowSpec))
+            .withColumn(f'cat_{variable}_broke_high_{n_periods}', when(col(variable) > col('max'), 1).otherwise(0))
+            .drop('max')
+        )
+
+        return dataset
+
+
+    def broken_stock_low(self, dataset:DataFrame, variable:str, partition_variables:list, order_variables:list, n_periods:int) -> DataFrame:
+
+        WindowSpec = Window.partitionBy(partition_variables).orderBy(order_variables).rowsBetween(-n_periods, -1)
+
+        dataset = (
+            dataset
+            .withColumn('min', min(col(variable)).over(WindowSpec))
+            .withColumn(f'cat_{variable}_broke_low_{n_periods}', when(col(variable) > col('min'), 1).otherwise(0))
+            .drop('min')
+        )
+
+        return dataset
+
+    def IFR(self, dataset:DataFrame, partition_var:list, order_var:list, n_periods:int, variable:str):
+
+        dataset = self.get_percentage_change(dataset=dataset, partition_var=partition_var, order_var=order_var, variable=variable, nlag=1, period='d')
+   
+        WindowSpec = Window.partitionBy(partition_var).orderBy(order_var).rowsBetween(start=-n_periods, end=-1)
+        dataset = (
+            dataset
+            .withColumnRenamed(f'pct_tx_{variable}_1d','pct')
+            .withColumn('high_price_mean', when(col('pct')>0, mean(col(variable)).over(WindowSpec)))
+            .withColumn('low_price_mean', when(col('pct')<0, mean(col(variable)).over(WindowSpec)))
+            .fillna(subset=['high_price_mean', 'low_price_mean'], value=0)
+            .withColumn('high_price_mean', sum(col('high_price_mean')).over(WindowSpec))
+            .withColumn('low_price_mean', sum(col('low_price_mean')).over(WindowSpec))
+            .withColumn(f'amt_IFR_{variable}_{n_periods}', (100-(100/(1+(col('high_price_mean')/col('low_price_mean'))))))
+            .drop('pct', 'high_price_mean', 'low_price_mean')
         )
 
         return dataset
