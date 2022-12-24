@@ -11,7 +11,7 @@ def get_stock_information(ticker_list, start, end=None):
     from pyspark.context import SparkContext
     from pyspark.conf import SparkConf
     from pyspark.sql import SparkSession
-    from pyspark.sql.functions import to_date, col, lit
+    from pyspark.sql.functions import to_date, col
     from pyspark.sql.types import IntegerType, FloatType
     from sparkDocuments import PATH_DATALAKE, DIR_PATH_RAW_STOCK, schema_ticker
     

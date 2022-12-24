@@ -1,14 +1,91 @@
 # Análise Fundamentalista
 
-Este é um projeto cujo objetivo principal é o desenvolvimento de uma aplicação capaz de fornecer o acesso a informação de empresas listadas na BMFBovespa para a realização de análises fundamentalistas.
+Este é um projeto cujo objetivo principal é o desenvolvimento de um pipeline de dados capaz de fornecer o acesso a diversas informações de empresas listadas na B3 para a realização de análises fundamentalistas.
 
-Os códigos têm a finalidade de realizar o provisionamento da infraestrutura necessária para armazenamento e execução das tarefas. Em um primeiro momento, as tarefas de extração de dados e pré-processamento serão realizadas localmente, no entanto, em um segundo momento, os códigos serão adaptados para funcionar 100% em cloud. A imagem a seguir apresenta o fluxo da aplicação de dados:
+As tarefas de extração de dados e pré-processamento podem ser realizadas localmente ou em cloud com um container docker ou até mesmo instalando e configurando o airflow. No entanto, para os JOBs que exigem mais esforço computacional o pipeline foi construido para utilizar o serviço EMR Serveless da AWS. Ou seja, a DAG do airflow inicia um cluster EMR que consome os dados armazenados em diversos buckets da S3 e faz as transformações necessárias nos dados. A imagem a seguir apresenta um resumo do fluxo da aplicação de dados:
 
-
-# Estrutura dos Dados
 
 ![Pipeline de Dados](./application-flow.png)
 
+
+# Preparando o Ambiente
+
+Para rodar esse pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do ubuntu, disponível no repositório - fundamentalista_pipeline/docker/Dockerfile - ou realizar a instalação do airflow.
+
+Caso você opte por fazer a instalação do Airflow acesse esse link: https://github.com/andre-ds/study-plan/blob/main/airflow/instalation.md e siga os passos.
+
+Se preferer usurfruir dos benefícios de um container docker, partindo da premissa que você já tem o docker devidamente instalado, basta seguir as instruções destacadas a seguir:
+
+    1. Criar a Imagem do Airflow
+    
+    Com o terminal aberto no diretório onde o arquivo Dockerfile está, vamos gerar (buildar) a imagem com o seguinte comando:
+
+        *docker build -f Dockerfile -t andre/airflow_spark .*
+
+    andre/airflow_spark é a denominação da imagem é pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
+
+    2. Iniciar a Imagem
+     
+     Para efetivamente rodar o container com a imagem do airflow bastar usar o seguinte comando:
+
+        *docker run -p 8080:8080 -v ./fundamentalista_pipeline/airflow/dags:/opt/airflow/dags -v ./fundamentalista_pipeline/datalake:/datalake/ -v ./fundamentalista_pipeline/sparkFiles:/opt/sparkFiles -it andre/airflow_spark*
+
+    Vale a pena destacar que com a instrução -p de porta estamos possibilitando o acesso a interface do airflow pelo navegado com o endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v de volume. Na prática você precisa substituir pelo exato *path* do seu computador ou na cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador no container com o airflow instalado. 
+
+    3. Acessar o Airflow 
+    
+    Abre o seu navegador e acesse o link http://localhost:8080. 
+    A partir de agora precisamos fazer algumas configurações no airflow para poder usar todas as DAGs. 
+
+
+# Configurando o Airflow
+
+Dado a maneira como o docker foi desenvolvido, cada vez que o container for iniciado se faz necessário criar três conexões e duas variáveis. 
+
+Para adicionar as variáveis de ambiente no Airflow acesse o menu *Admin* seguido por *Variables*. Adicione a Key EMR_FUNDAMENTUS com o IAM da AWS com role para acessar buckets da S3 e o serviço EMR. Essa variável de ambiente vai permitir que possamos usar o serviço da EMR Serveless, caso você não saiba criá-la leia as instruções da documentação da AWS - Getting started with Amazon EMR Serverless: https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-set-up.html#create-an-admin.
+
+A segunda variávei de ambiente define o bucket S3 que serrão armazenados os logs dos dos processos do EMR Serveless. O Key da variávei é S3_LOGS_BUCKET e o bucket que irá no campo Val é fundamentus-codes. 
+
+Essas variáveis de ambiente serão utilizadas para as DAGs *analytical_dre_dag.py* e *analytical_stock_price_dag.py*.
+
+Quanto as conexões para criá-las acesse *Admin* e *Connection*, é preciso criar três conexões:
+
+
+**Conexão do Spark**
+Connection Id | Connection Type | Host | Extra
+------|------ |------ |------ |
+spark | Spark | local | {"spark-submit": "/opt/spark/spark-3.3.1-bin-hadoop3"}
+
+*Obs: a versão 3.3.1 do Spark é instalada no Dockerfile, caso você instale outra versão é preciso fazer o ajuste tanto do path quanto da versão na conexão.*
+
+**Conexão do S3**
+Connection Id | Connection Type | Extra
+------|------ |------ |
+s3_conn | Amazon Web Services | {"aws_access_key_id":XXXX, "aws_secret_access_key": XXXX}
+
+*Onde: XXXX serão substituídos pelos respectivos key e secret key de acesso aos buckts criados por você.*
+
+**Conexão do AWS Geral**
+
+Connection Id | Connection Type | Extra
+------|------ |------ |
+aws_default | Amazon Web Services | {"aws_access_key_id": XXXX , "aws_secret_access_key": XXXX, "region_name": "us-east-2"}
+
+*Obs: Essa conexão é utilizada pelo serviço EMR Serveless que é executado específicamente no meu caso na região us-east-2. Faça as substituições de acordo com a sua necessidade.*
+
+# Arquitetura do Pipeline de Dados
+
+DAG | Descrição
+------|------ 
+cvm_registration_dag | Dag responsável por extrair dados cadastrais das empresas de capital aberto negociadas na B3.
+stock_extraction_dag | Dag de extração de dados cotação de ações.
+analytical_stock_price_dag | Dag de criação de variáveis relacionadadas com os dados de cotação para camada análitica.
+cvm_itr_dag | Dag de extração e pré-processamento dos dados financeiros ITR cuja fonte de dados é a CVM.
+cvm_dfp_dag | Dag de extração e pré-processamento dos dados financeiros DFP cuja fonte de dados é a CVM.
+analytical_dre_dag | Dag responsável pela criação de variáveis analíticas relacionadas aos dados de DRE.
+
+
+# Arquitetura de Dados
 
 ## **Camada raw**
 
