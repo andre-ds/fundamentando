@@ -37,8 +37,8 @@ with DAG(
     application_id = create_app.output
 
 
-    stock_analytical = EmrServerlessStartJobOperator(
-        task_id='stock_analytical_id',
+    stock_analytical_temp = EmrServerlessStartJobOperator(
+        task_id='stock_analytical_temp_id',
         application_id=application_id,
         execution_role_arn=EMR_FUNDAMENTUS,
         job_driver={
@@ -50,14 +50,14 @@ with DAG(
         configuration_overrides=DEFAULT_MONITORING_CONFIG,
     )
 
-    stock_analytical_2 = EmrServerlessStartJobOperator(
-        task_id='stock_analytical_2_id',
+    stock_analytical = EmrServerlessStartJobOperator(
+        task_id='stock_analytical_id',
         application_id=application_id,
         execution_role_arn=EMR_FUNDAMENTUS,
         job_driver={
             "sparkSubmit": {
                 'entryPoint':'s3://fundamentus-codes/sparkFiles/stock_price_analytical.py',
-                'sparkSubmitParameters':'--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.archives=s3://fundamentus-codes/pyspark_venv.tar.gz#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executor.cores=4 --conf spark.executor.memory=26g --conf spark.executor.instances=20 --conf spark.driver.cores=4 --conf spark.driver.memory=26g',
+                'sparkSubmitParameters':'--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip --conf spark.archives=s3://fundamentus-codes/pyspark_venv.tar.gz#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executor.cores=4 --conf spark.executor.memory=26g --conf spark.executor.instances=30 --conf spark.driver.cores=4 --conf spark.driver.memory=26g',
             }
         },
         configuration_overrides=DEFAULT_MONITORING_CONFIG,
@@ -69,4 +69,4 @@ with DAG(
         trigger_rule="all_done",
     )
 
-    create_app >> stock_analytical >> stock_analytical_2 >> delete_app
+    create_app >> stock_analytical_temp >> stock_analytical >> delete_app
