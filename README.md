@@ -10,32 +10,32 @@ As tarefas de extração de dados e pré-processamento podem ser realizadas loca
 
 # Preparando o Ambiente
 
-Para rodar esse pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do ubuntu, disponível no repositório - fundamentalista_pipeline/docker/Dockerfile - ou realizar a instalação do airflow.
+Para rodar este pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do ubuntu disponível no repositório - fundamentalista_pipeline/docker/Dockerfile - ou realizar a instalação do airflow.
 
 Caso você opte por fazer a instalação do Airflow acesse esse link: https://github.com/andre-ds/study-plan/blob/main/airflow/instalation.md e siga os passos.
 
 Se preferer usurfruir dos benefícios de um container docker, partindo da premissa que você já tem o docker devidamente instalado, basta seguir as instruções destacadas a seguir:
 
-    1. Criar a Imagem do Airflow
+1. Criar a Imagem do Airflow
     
-    Com o terminal aberto no diretório onde o arquivo Dockerfile está, vamos gerar (buildar) a imagem com o seguinte comando:
+Com o terminal aberto no diretório onde o arquivo Dockerfile está, vamos gerar (buildar) a imagem com o seguinte comando:
 
-        *docker build -f Dockerfile -t andre/airflow_spark .*
+*docker build -f Dockerfile -t andre/airflow_spark .*
 
-    andre/airflow_spark é a denominação da imagem é pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
+andre/airflow_spark é a denominação da imagem é pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
 
-    2. Iniciar a Imagem
+2. Iniciar a Imagem
      
-     Para efetivamente rodar o container com a imagem do airflow bastar usar o seguinte comando:
+Para efetivamente rodar o container com a imagem do airflow bastar usar o seguinte comando:
 
-        *docker run -p 8080:8080 -v ./fundamentalista_pipeline/airflow/dags:/opt/airflow/dags -v ./fundamentalista_pipeline/datalake:/datalake/ -v ./fundamentalista_pipeline/sparkFiles:/opt/sparkFiles -it andre/airflow_spark*
+*docker run -p 8080:8080 -v ./fundamentalista_pipeline/airflow/dags:/opt/airflow/dags -v ./fundamentalista_pipeline/datalake:/datalake/ -v ./fundamentalista_pipeline/sparkFiles:/opt/sparkFiles -it andre/airflow_spark*
 
-    Vale a pena destacar que com a instrução -p de porta estamos possibilitando o acesso a interface do airflow pelo navegado com o endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v de volume. Na prática você precisa substituir pelo exato *path* do seu computador ou na cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador no container com o airflow instalado. 
+Vale a pena destacar que com a instrução -p de porta estamos possibilitando o acesso a interface do airflow pelo navegado com o endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v de volume. Na prática você precisa substituir pelo exato *path* do seu computador ou na cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador no container com o airflow instalado. 
 
-    3. Acessar o Airflow 
+3. Acessar o Airflow 
     
-    Abre o seu navegador e acesse o link http://localhost:8080. 
-    A partir de agora precisamos fazer algumas configurações no airflow para poder usar todas as DAGs. 
+Abre o seu navegador e acesse o link http://localhost:8080. 
+A partir de agora precisamos fazer algumas configurações no airflow para poder usar todas as DAGs. 
 
 
 # Configurando o Airflow
@@ -63,7 +63,7 @@ Connection Id | Connection Type | Extra
 ------|------ |------ |
 s3_conn | Amazon Web Services | {"aws_access_key_id":XXXX, "aws_secret_access_key": XXXX}
 
-*Onde: XXXX serão substituídos pelos respectivos key e secret key de acesso aos buckts criados por você.*
+*Onde XXXX serão substituídos pelos respectivos key e secret key de acesso aos buckts criados por você na sua conta da AWS.*
 
 **Conexão do AWS Geral**
 
@@ -71,7 +71,7 @@ Connection Id | Connection Type | Extra
 ------|------ |------ |
 aws_default | Amazon Web Services | {"aws_access_key_id": XXXX , "aws_secret_access_key": XXXX, "region_name": "us-east-2"}
 
-*Obs: Essa conexão é utilizada pelo serviço EMR Serveless que é executado específicamente no meu caso na região us-east-2. Faça as substituições de acordo com a sua necessidade.*
+*Obs: Essa conexão é utilizada pelo serviço EMR Serveless. Específicamente no meu caso o serviço é executado na região us-east-2. Faça as substituições de acordo com a sua necessidade.*
 
 # Arquitetura do Pipeline de Dados
 
