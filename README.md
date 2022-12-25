@@ -10,7 +10,7 @@ As tarefas de extração de dados e pré-processamento podem ser realizadas loca
 
 # Preparando o Ambiente
 
-Para rodar este pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do ubuntu disponível no repositório - fundamentalista_pipeline/docker/Dockerfile - ou realizar a instalação do airflow.
+Para rodar este pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do ubuntu disponível no repositório onde o spark também é instalado - fundamentalista_pipeline/docker/Dockerfile - ou realizar a instalação do airflow "manualmente".
 
 Caso você opte por fazer a instalação do Airflow acesse esse link: https://github.com/andre-ds/study-plan/blob/main/airflow/instalation.md e siga os passos.
 
@@ -30,7 +30,7 @@ Para efetivamente rodar o container com a imagem do airflow bastar usar o seguin
 
 *docker run -p 8080:8080 -v ./fundamentalista_pipeline/airflow/dags:/opt/airflow/dags -v ./fundamentalista_pipeline/datalake:/datalake/ -v ./fundamentalista_pipeline/sparkFiles:/opt/sparkFiles -it andre/airflow_spark*
 
-Vale a pena destacar que com a instrução -p de porta estamos possibilitando o acesso a interface do airflow pelo navegado com o endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v de volume. Na prática você precisa substituir pelo exato *path* do seu computador ou na cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador no container com o airflow instalado. 
+Vale a pena destacar que com a instrução -p (de porta) estamos possibilitando o acesso a interface do airflow pelo navegador com o endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v (de volume). Na prática você precisa substituir pelo exato *path* do seu computador ou da instância da cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador (local) no container com o airflow instalado. 
 
 3. Acessar o Airflow 
     
@@ -74,6 +74,18 @@ aws_default | Amazon Web Services | {"aws_access_key_id": XXXX , "aws_secret_acc
 *Obs: Essa conexão é utilizada pelo serviço EMR Serveless. Específicamente no meu caso o serviço é executado na região us-east-2. Faça as substituições de acordo com a sua necessidade.*
 
 # Arquitetura do Pipeline de Dados
+
+O repositório está organizado em três pastas:
+
+- airflow
+- docker
+- sparkFiles
+
+ Na pasta airflow é possível acessar outro repositório chamado de dags onde cada uma das dags do pipeline está. Além disso, há uma pasta utils com os arquivos Utils.py e documents.py. O primeiro contém uma série de métodos utilizados e importados nas DAGs. Na pasta documents estão os repositórios da CVM onde os dados financeiros são extraidos e a lista contendo os períodos que são extraídos.
+
+Em seguida, na pasta docker é armazenado somente o Dockerfile mencionado nas instruções anteriores para a criação da imagem do airflow e instalação do spark.
+
+No diretório sparkFiles são armazenados todos os cógigos utilizados pelas DAGs para realizar a transformação dos dados. Além disso, há dois arquivos muito importante para a execução das DAGs. O arquivo python PreProcessing.py contém a classe com todos os métodos desenvolvidos para processamento dos dados. O objetivo da utilização desta classe é manter os códigos mais organizados e limpos. Há também um arquivo sparkDocuments.py que são armazenados objetos importantes para o funcionamento do pipeline. Mais especificamente ali são disponibilizados dicionários utilizados no pre-processamento dos dados finacneiros (types_dict, bpp_account, bpa_account, dre_account), schemas para garantir que os arquivos parquet sejam persistidos corretamente (schema_dre, schema_bp_ba, schema_ticker, schema_pp_dre), o path com as pastas onde os arquivos são persistidos antes de serem enviados para os buckets S3 (DIR_PATH_------) e o mais importante os objetos com os nomes dos buckets do datalake que são utilizados no serviço EMR Serveless (DIR_S3_PROCESSED_STOCKS, DIR_S3_ANALYTICAL). Em seguida será apresentando o papel de cada uma das DAGs no pipeline de consumo e transofmração dos dados, bem como, os outputs gerados e quais mudanças você deve fazer para salvar as informações nos seus buckets da sua conta na AWS:
 
 DAG | Descrição
 ------|------ 
