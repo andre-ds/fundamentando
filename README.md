@@ -16,7 +16,7 @@ Caso você opte por fazer a instalação do Airflow acesse esse link: https://gi
 
 Se preferer usurfruir dos benefícios de um container docker, partindo da premissa que você já tem o docker devidamente instalado, basta seguir as instruções destacadas a seguir:
 
-1. Criar a Imagem do Airflow
+### 1. Criar a Imagem do Airflow
     
 Com o terminal aberto no diretório onde o arquivo Dockerfile está, vamos gerar (buildar) a imagem com o seguinte comando:
 
@@ -24,7 +24,7 @@ Com o terminal aberto no diretório onde o arquivo Dockerfile está, vamos gerar
 
 andre/airflow_spark é a denominação da imagem é pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
 
-2. Iniciar a Imagem
+### 2. Iniciar a Imagem
      
 Para efetivamente rodar o container com a imagem do airflow bastar usar o seguinte comando:
 
@@ -32,7 +32,7 @@ Para efetivamente rodar o container com a imagem do airflow bastar usar o seguin
 
 Vale a pena destacar que com a instrução -p (de porta) estamos possibilitando o acesso a interface do airflow pelo navegador com o endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v (de volume). Na prática você precisa substituir pelo exato *path* do seu computador ou da instância da cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador (local) no container com o airflow instalado. 
 
-3. Acessar o Airflow 
+### 3. Acessar o Airflow 
     
 Abre o seu navegador e acesse o link http://localhost:8080. 
 A partir de agora precisamos fazer algumas configurações no airflow para poder usar todas as DAGs. 
@@ -85,7 +85,7 @@ O repositório está organizado em três pastas:
 
 Em seguida, na pasta docker é armazenado somente o Dockerfile mencionado nas instruções anteriores para a criação da imagem do airflow e instalação do spark.
 
-No diretório sparkFiles são armazenados todos os cógigos utilizados pelas DAGs para realizar a transformação dos dados. Além disso, há dois arquivos muito importante para a execução das DAGs. O arquivo python PreProcessing.py contém a classe com todos os métodos desenvolvidos para processamento dos dados. O objetivo da utilização desta classe é manter os códigos mais organizados e limpos. Há também um arquivo sparkDocuments.py que são armazenados objetos importantes para o funcionamento do pipeline. Mais especificamente ali são disponibilizados dicionários utilizados no pre-processamento dos dados finacneiros (types_dict, bpp_account, bpa_account, dre_account), schemas para garantir que os arquivos parquet sejam persistidos corretamente (schema_dre, schema_bp_ba, schema_ticker, schema_pp_dre), o path com as pastas onde os arquivos são persistidos antes de serem enviados para os buckets S3 (DIR_PATH_------) e o mais importante os objetos com os nomes dos buckets do datalake que são utilizados no serviço EMR Serveless (DIR_S3_PROCESSED_STOCKS, DIR_S3_ANALYTICAL). Em seguida será apresentando o papel de cada uma das DAGs no pipeline de consumo e transofmração dos dados, bem como, os outputs gerados e quais mudanças você deve fazer para salvar as informações nos seus buckets da sua conta na AWS:
+No diretório sparkFiles são armazenados todos os cógigos utilizados pelas DAGs para realizar a transformação dos dados. Além disso, há dois arquivos muito importante para a execução das DAGs. O arquivo python PreProcessing.py contém a classe com todos os métodos desenvolvidos para processamento dos dados. O objetivo da utilização desta classe é manter os códigos mais organizados e limpos. Há também um arquivo sparkDocuments.py que são armazenados objetos importantes para o funcionamento do pipeline. Mais especificamente ali são disponibilizados dicionários utilizados no pre-processamento dos dados finacneiros (types_dict, bpp_account, bpa_account, dre_account), schemas para garantir que os arquivos parquet sejam persistidos corretamente (schema_dre, schema_bp_ba, schema_ticker, schema_pp_dre), o path com as pastas onde os arquivos são persistidos antes de serem enviados para os buckets S3 (PATH_DATALAKE, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_RAW_STOCK, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR, DIR_PATH_PROCESSED_STOCK, DIR_PATH_ANALYTICAL) e o mais importante os objetos com os nomes dos buckets do datalake que são utilizados no serviço EMR Serveless (DIR_S3_PROCESSED_STOCKS, DIR_S3_ANALYTICAL). Em seguida será apresentando o papel de cada uma das DAGs no pipeline de consumo e transofmração dos dados, bem como, os outputs gerados e quais mudanças você deve fazer para salvar as informações nos seus buckets da sua conta na AWS:
 
 DAG | Descrição
 ------|------ 
@@ -95,6 +95,21 @@ analytical_stock_price_dag | Dag de criação de variáveis relacionadadas com o
 cvm_itr_dag | Dag de extração e pré-processamento dos dados financeiros ITR cuja fonte de dados é a CVM.
 cvm_dfp_dag | Dag de extração e pré-processamento dos dados financeiros DFP cuja fonte de dados é a CVM.
 analytical_dre_dag | Dag responsável pela criação de variáveis analíticas relacionadas aos dados de DRE.
+
+
+### stock_extraction_dag
+
+**Depêndias de Códigos**
+airflow/utils/Util.py: 
+sparkFiles/tock_extraction.py: Responsável por extrair a precificação das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações). 
+sparkFiles/union_stocks.py: Código responsável por unificar a precificação diária de cada empresa em um único arquivo.
+
+**Outputs**
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ 
+Raw | extracted_{extract_at}_stock.parquet | Definido pelo JOB upload_s3_raw_ticker parâmetro *bucket* | Preço dos ativos onde extract_at é a referente data de extração
+
 
 
 # Arquitetura de Dados

@@ -147,20 +147,6 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
                 DIR_PATH, f'{file}'), bucket_name=bucket, key=f'{file}', replace=True)
 
 
-    def __load_pp_dfp_itr(DIR_PATH, dataType):
-
-        folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
-
-        for folder in folder_list:
-            try:
-                DIR_PATH_FILE = os.path.join(DIR_PATH, folder)
-                files_list = [file for file in os.listdir(DIR_PATH_FILE)]
-                for file in files_list:
-                    hook.load_file(filename=f'{DIR_PATH_FILE}/{file}', bucket_name=bucket, key=f'{folder}/{file}', replace=True)
-            except:
-                print('Is not a folder!')
-
-
     def __load_pp(DIR_PATH, dataType, delete):
 
         folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
@@ -176,6 +162,7 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
                     hook.load_file(filename=f'{DIR_PATH_FILE}/{file}', bucket_name=bucket, key=f'{folder}/{file}', replace=True)
             except:
                 print('Is not a folder!')
+
 
     def __load_pp_partition(DIR_PATH, dataType):
 
@@ -227,19 +214,16 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_DFP', task_ids='path_environment')
         dataType = 'dfp'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
-        #__load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
     elif dataType == 'pre-processed-itr':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_ITR', task_ids='path_environment')
         dataType = 'itr'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
-       # __load_pp_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
     elif dataType == 'pre-processed-stock':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_STOCK', task_ids='path_environment')
         dataType = f'pp_stock_union.parquet'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
-        #__load_pp_partition(DIR_PATH=DIR_PATH, dataType=dataType)
 
 
 def download_s3(ti, bucket_name, key, dataType):
