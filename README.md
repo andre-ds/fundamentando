@@ -104,7 +104,9 @@ analytical_dre_dag | Dag responsável pela criação de variáveis analíticas r
 **Depêndias de Códigos**
 
 airflow/utils/Util.py: Onde o método load_bucket está disponível. load_bucket é utilizado para persistir os arquivos no bucket da S3.
-sparkFiles/tock_extraction.py: Responsável por extrair a precificação das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações). 
+
+sparkFiles/tock_extraction.py: Responsável por extrair a precificação das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações).
+
 sparkFiles/union_stocks.py: Código responsável por unificar a precificação diária de cada empresa em um único arquivo.
 
 **Outputs**
