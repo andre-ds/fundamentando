@@ -4,7 +4,7 @@ from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
-from utils.Utils import load_bucket, download_s3
+from utils.Utils import load_bucket
 
 
 EXECUTION_DATE = '{{ ds }}'

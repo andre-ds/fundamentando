@@ -85,7 +85,9 @@ O repositório está organizado em três pastas:
 
 Em seguida, na pasta docker é armazenado somente o Dockerfile mencionado nas instruções anteriores para a criação da imagem do airflow e instalação do spark.
 
-No diretório sparkFiles são armazenados todos os cógigos utilizados pelas DAGs para realizar a transformação dos dados. Além disso, há dois arquivos muito importante para a execução das DAGs. O arquivo python PreProcessing.py contém a classe com todos os métodos desenvolvidos para processamento dos dados. O objetivo da utilização desta classe é manter os códigos mais organizados e limpos. Há também um arquivo sparkDocuments.py que são armazenados objetos importantes para o funcionamento do pipeline. Mais especificamente ali são disponibilizados dicionários utilizados no pre-processamento dos dados finacneiros (types_dict, bpp_account, bpa_account, dre_account), schemas para garantir que os arquivos parquet sejam persistidos corretamente (schema_dre, schema_bp_ba, schema_ticker, schema_pp_dre), o path com as pastas onde os arquivos são persistidos antes de serem enviados para os buckets S3 (PATH_DATALAKE, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_RAW_STOCK, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR, DIR_PATH_PROCESSED_STOCK, DIR_PATH_ANALYTICAL) e o mais importante os objetos com os nomes dos buckets do datalake que são utilizados no serviço EMR Serveless (DIR_S3_PROCESSED_STOCKS, DIR_S3_ANALYTICAL). Em seguida será apresentando o papel de cada uma das DAGs no pipeline de consumo e transofmração dos dados, bem como, os outputs gerados e quais mudanças você deve fazer para salvar as informações nos seus buckets da sua conta na AWS:
+No diretório sparkFiles são armazenados todos os cógigos utilizados pelas DAGs para realizar a transformação dos dados. Além disso, há dois arquivos muito importante para a execução das DAGs. O arquivo python PreProcessing.py contém a classe com todos os métodos desenvolvidos para processamento dos dados. O objetivo da utilização desta classe é manter os códigos mais organizados e limpos. Há também um arquivo sparkDocuments.py que são armazenados objetos importantes para o funcionamento do pipeline. Mais especificamente ali são disponibilizados dicionários utilizados no pre-processamento dos dados finacneiros (types_dict, bpp_account, bpa_account, dre_account), schemas para garantir que os arquivos parquet sejam persistidos corretamente (schema_dre, schema_bp_ba, schema_ticker, schema_pp_dre), o path com as pastas onde os arquivos são persistidos antes de serem enviados para os buckets S3 (PATH_DATALAKE, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_RAW_STOCK, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR, DIR_PATH_PROCESSED_STOCK, DIR_PATH_ANALYTICAL) e o mais importante os objetos com os nomes dos buckets do datalake que são utilizados no serviço EMR Serveless (DIR_S3_PROCESSED_STOCKS, DIR_S3_ANALYTICAL).
+
+Em seguida será apresentando o papel de cada uma das DAGs no pipeline de consumo e transofmração dos dados, bem como, os outputs gerados e quais mudanças você deve fazer para salvar as informações nos seus buckets da sua conta na AWS:
 
 DAG | Descrição
 ------|------ 
@@ -100,14 +102,15 @@ analytical_dre_dag | Dag responsável pela criação de variáveis analíticas r
 ### stock_extraction_dag
 
 **Depêndias de Códigos**
-airflow/utils/Util.py: 
+
+airflow/utils/Util.py: Onde o método load_bucket está disponível. load_bucket é utilizado para persistir os arquivos no bucket da S3.
 sparkFiles/tock_extraction.py: Responsável por extrair a precificação das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações). 
 sparkFiles/union_stocks.py: Código responsável por unificar a precificação diária de cada empresa em um único arquivo.
 
 **Outputs**
 
 Camada | Arquivo | Onde é Salvo | Descrição
-------|------ |------ 
+------|------ |------ |------ 
 Raw | extracted_{extract_at}_stock.parquet | Definido pelo JOB upload_s3_raw_ticker parâmetro *bucket* | Preço dos ativos onde extract_at é a referente data de extração
 
 
