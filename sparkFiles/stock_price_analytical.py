@@ -1,6 +1,6 @@
 import os
 from pyspark.sql import SparkSession
-from sparkDocuments import DIR_S3_ANALYTICAL, DIR_S3_PROCESSED_STOCKS
+from sparkDocuments import DIR_S3_ANALYTICAL
 from PreProcessing import PreProcessing
 from pyspark.sql.functions import col, year, quarter, max
 from pyspark.sql.window import Window

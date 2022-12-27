@@ -5,7 +5,6 @@ from groups.group_extractions_cvm import extraction_cvm
 from groups.group_pre_processing_cvm import pre_processing_cvm
 from utils.Utils import path_environment, unzippded_files, load_bucket
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash_operator import BashOperator
 
 
 EXECUTION_DATE = '{{ ds }}'

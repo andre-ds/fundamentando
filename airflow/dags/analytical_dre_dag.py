@@ -40,7 +40,7 @@ with DAG(
 
 
     union_datasets = EmrServerlessStartJobOperator(
-        task_id='dre_union_id',
+        task_id='dre_union',
         application_id=application_id,
         execution_role_arn=EMR_FUNDAMENTUS,
         job_driver={
@@ -53,8 +53,8 @@ with DAG(
     )
 
 
-    pre_processing = EmrServerlessStartJobOperator(
-        task_id='dre_analytical_id',
+    pre_processing_dre_analytical = EmrServerlessStartJobOperator(
+        task_id='dre_analytical',
         application_id=application_id,
         execution_role_arn=EMR_FUNDAMENTUS,
         job_driver={
@@ -72,4 +72,4 @@ with DAG(
         trigger_rule="all_done",
     )
 
-    create_app >> union_datasets >> pre_processing >> delete_app
+    create_app >> union_datasets >> pre_processing_dre_analytical >> delete_app

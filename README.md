@@ -99,22 +99,93 @@ cvm_dfp_dag | Dag de extração e pré-processamento dos dados financeiros DFP c
 analytical_dre_dag | Dag responsável pela criação de variáveis analíticas relacionadas aos dados de DRE.
 
 
-### stock_extraction_dag
+## stock_extraction_dag
 
-**Depêndias de Códigos**
+**stock_extractions_id**: sparkFiles/stock_extraction.py
 
-airflow/utils/Util.py: Onde o método load_bucket está disponível. load_bucket é utilizado para persistir os arquivos no bucket da S3.
+Responsável por extrair a precificação diária de cada uma das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações).
 
-sparkFiles/tock_extraction.py: Responsável por extrair a precificação das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações).
+**union_stocks**: sparkFiles/union_stocks.py
 
-sparkFiles/union_stocks.py: Código responsável por unificar a precificação diária de cada empresa em um único arquivo.
+Código responsável por unificar a precificação diária de cada empresa em um único arquivo.
+
+**Outras dependências**: airflow/utils/Util.py: Onde o método load_bucket está disponível. load_bucket é utilizado para persistir os arquivos no bucket da S3.
 
 **Outputs**
 
 Camada | Arquivo | Onde é Salvo | Descrição
 ------|------ |------ |------ 
-Raw | extracted_{extract_at}_stock.parquet | Definido pelo JOB upload_s3_raw_ticker parâmetro *bucket* | Preço dos ativos onde extract_at é a referente data de extração
+<font size="1.9">RAW</font> | <font size="1.9">extracted_{extract_at}_stock.parquet</font> | <font size="1.9">Definido pelo JOB upload_s3_raw_ticker parâmetro *bucket*</font>  | <font size="1.9">Preço dos ativos em um determinado período, onde extract_at é a referente data de extração.</font>
+<font size="1.9">PRE-PROCESSED</font> | <font size="1.9">pp_stock_union.parquet</font> | <font size="1.9">Definido pelo JOB upload_upload_s3_unions3_raw_ticker parâmetro *bucket*</font> | <font size="1.9">É a união de todos os arquivos de preços diários da camada RAW.</font>
 
+
+## analytical_stock_price_dag
+
+A DAG para a transformações dos dados de preços das ações em uma camada análitica, ou seja, nesta camada são criadas uma série de variáveis que serão utilizadas em análises ad-hoc ou para o desenvolvimento de modelos dentro do contexto de dados de preço, volume e pagamento de dividendos. Como mencionado anteriormente, para este processamento dos dados utilizo o serviço EMR Serveless da AWS, um serviço pago que exige algumas configurações adicionais que serão descritas a seguir:
+
+Além das variáveis de ambiente descritas na seção de *Configurando o Airflow* é preciso criar um bucket S3 onde os códigos que serão utilizados no cluster EMR, neste caso específico o path do código é disponibilizado com o parâmetro *entryPoint* e 's3://fundamentus-codes/sparkFiles/stock_price_analytical_temp.py'. Perceba que o bucket criado por mim é o fundamentus-codes seguido da pasta sparkFiles. O mesmo acontece para o outro JOB 's3://fundamentus-codes/sparkFiles/stock_price_analytical.py'. Ná prática, você precisa criar o seu bucket e substituí-lo no código.
+
+Além disso, para salvar no cluster outras dependências de códigos isso é feito no parâmetro *sparkSubmitParameters* '--conf spark.submit.pyFiles=s3://fundamentus-codes/sparkFiles.zip'. O arquivo sparkFiles.zip contém PreProcessing.py e sparkDocuments.py compactados. Em outras palavras, esse comando copia o arquivo ZIP para dentro do cluster. **Vale a pena mencionar que se qualquer modificação é feita em alguns desses arquivos é preciso atualizar também o arquivo ZIP no bucket.**
+
+
+**stock_analytical_temp_id**: sparkFiles/stock_price_analytical_temp.py
+
+As variáveis são criadas em duas etapas, esta é a primeira e cria um arquivo temporário utilizado pelo JOB posterior.
+
+**stock_analytical_id**: sparkFiles/stock_price_analytical.py
+
+Etapa final da criação das variáveis da camada analítica.
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">ANALYTICAL</font> | <font size="1.9">analytical_stock_price_temp.parquet</font> | <font size="1.9">No bucket definido pelo objeto DIR_S3_ANALYTICAL que é salvo em sparkFiles/sparkDocuments</font>  | <font size="1.9">É necessário atualizar o o objeto DIR_S3_ANALYTICAL com o nome do bucket da camada analítica do seu datalake. Além disso, o JOB depende do arquivo pp_stock_union.parquet da DAG anterior, então é preciso atualizar também o objeto DIR_S3_PROCESSED_STOCKS.</font>
+<font size="1.9">ANALYTICAL</font> | <font size="1.9">analytical_stock_price.parquet</font> | <font size="1.9">No bucket definido pelo objeto DIR_S3_ANALYTICAL que é salvo em sparkFiles/sparkDocuments</font>  | <font size="1.9">É necessário atualizar o o objeto DIR_S3_ANALYTICAL com o nome do bucket da camada analítica do seu datalake.</font>
+
+
+## cvm_itr_dag e cvm_dfp_dag
+
+**extraction_cvm**: airflow/dags/groups/group_extractions_cvm
+
+Trata-se dos jobs responsáveis por extrairem os arquivos brutos de ITR ou DFP do portal de dados. O parâmetro *dataType* define o tipo da informação.
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">RAW</font> | <font size="1.9"> extracted_{extracted_at}_cia_aberta_{year}.zip</font> | <font size="1.9">Definido pelo parâmetro bucket do JOB upload_s3_raw_itr</font>  | <font size="1.9">Onde extract_at é a referente data de extração e year é o ano da informação.</font>
+
+
+**pre_processing_cvm**: airflow/dags/groups/group_pre_processing_cvm
+
+O método pre_processing_cvm é utilizado para realizar o pré-processamento dos dados de acordo com o parâmetro *dataType*, neste caso pode ser:
+- itr_dre
+- itr_bpp
+- itr_bpa
+- dfp_dre
+- dfp_bpa
+- dfp_bpp
+
+Camada | Arquivo | Onde é Salvo | Descrição
+<font size="1.9">PRE-PROCESSED</font> | <font size="1.9">pp_itr_dre_2019.parquet</font> | <font size="1.9">Definido pelo parâmetro bucket do JOB upload_s3_pp_itr ou upload_s3_pp_dfp</font>  | <font size="1.9">Onde itr é o tipo da informação (ITR, DRE) seguido por DRE, BPP ou BPA. year é o ano da informação.</font>
+
+
+## analytical_dre_dag
+
+Esta DAG é responsável pela criação da camada análitica das variáveis do DRE das empresas. Assim como a DAG analytical_stock_price_dag também é utilizado o serviço EMR Serveless e os códigos respectivos a essa DAG devem ser disponibilizados no bucket de código, bem como, com o arquivo compactado sparkFiles.zip como mencionado anteriormente.
+
+**dre_union**: sparkFiles/dre_union.py
+
+Os dados disponibilizados pelos arquivos ITR da CVM levando em consideração a referência contábil de cada empresa são do primeiro, segundo e terceiro trimestre. o JOB de união tem como objetivo além de unificar em um único arquivo todos os períodos disponibilizados obter por meio dos dados anuais FPD o último trimestre de cada ano, isso é feito por meio da diferença acumulada dos três trimestres e o resultado anual. 
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">ANALYTICAL</font> | <font size="1.9">pp_stock_union.parquet</font> | <font size="1.9">No bucket definido pelo objeto DIR_S3_ANALYTICAL que é salvo em sparkFiles/sparkDocuments</font>  | <font size="1.9">-</font>
+
+**dre_analytical**: sparkFiles/dre_analytical.py
+
+Etapa final da criação das variáveis da camada analítica das informações do DRE.
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">ANALYTICAL</font> | <font size="1.9">analytical_dre.parquet</font> | <font size="1.9">No bucket definido pelo objeto DIR_S3_ANALYTICAL que é salvo em sparkFiles/sparkDocuments</font>  | <font size="1.9">-</font>
 
 
 # Arquitetura de Dados
