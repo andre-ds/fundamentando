@@ -192,7 +192,7 @@ Camada | Arquivo | Onde é Salvo | Descrição
 
 A figura destacada a seguir resume como o datalake está organizado em cada um dos buckets na S3.
 
-![Pipeline de Dados](./application-flow.png)
+![Pipeline de Dados](./datalake.png)
 
 
 ## **Camada raw**
