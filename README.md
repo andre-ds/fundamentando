@@ -190,9 +190,14 @@ Camada | Arquivo | Onde é Salvo | Descrição
 
 # Arquitetura de Dados
 
+A figura destacada a seguir resume como o datalake está organizado em cada um dos buckets na S3.
+
+![Pipeline de Dados](./application-flow.png)
+
+
 ## **Camada raw**
 
-A primeira etapa consiste na extração dos dados de empresas disponíveis na CVM e persistência deles na camada **Raw** do datalake na AWS. Essa camada armazena o dado da forma mais bruta, ou seja, o dado é extraido e armazenado sem ser feito nenhum tipo de alteração, inclusive de formato, mantendo-se assim o formato original (zip).
+Essa camada armazena o dado da forma mais bruta, ou seja, o dado é extraido e armazenado sem ser feito nenhum tipo de alteração, inclusive de formato, mantendo-se assim o formato original quando possível.
 
 ### Taxonomia da Nomenclatura dos Arquivos Persistidos
 
@@ -200,13 +205,15 @@ A primeira etapa consiste na extração dos dados de empresas disponíveis na CV
 
 Exemplo:
 
-**extracted_2022_09_15_dfp_cia_aberta_2021.zip**
+**extracted_2021_01_08_stock.parquet** - fundamentus-pre-processed-stock
+**extracted_2022_09_15_itr_cia_aberta_2021.zip** - fundamentus-pre-processed-itr
+**extracted_2022_09_15_dfp_cia_aberta_2021.zip** - fundamentus-pre-processed-dfp
 
 Onde: 
 
 Taxonomia | Descrição 
 ------|------
-Data de Extração | Data pela qual o arquivo foi extraído.
+Data de Extração | Data pela qual o arquivo foi extraído, ou seja, a data de execução da DAG.
 Tipo | Trata-se do nome do arquivo que foi disponibilizado.
 
 
