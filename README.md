@@ -205,9 +205,9 @@ Essa camada armazena o dado da forma mais bruta, ou seja, o dado é extraido e a
 
 Exemplo:
 
-**extracted_2021_01_08_stock.parquet** - fundamentus-pre-processed-stock
-**extracted_2022_09_15_itr_cia_aberta_2021.zip** - fundamentus-pre-processed-itr
-**extracted_2022_09_15_dfp_cia_aberta_2021.zip** - fundamentus-pre-processed-dfp
+**extracted_2021_01_08_stock.parquet**
+**extracted_2022_09_15_itr_cia_aberta_2021.zip**
+**extracted_2022_09_15_dfp_cia_aberta_2021.zip**
 
 Onde: 
 
@@ -216,6 +216,16 @@ Taxonomia | Descrição
 Data de Extração | Data pela qual o arquivo foi extraído, ou seja, a data de execução da DAG.
 Tipo | Trata-se do nome do arquivo que foi disponibilizado.
 
+
+**Tipo**
+
+O tipo é indica, inicialmente, se é DFP ou ITR e o tipo da demonstração financeira.
+
+Abreviação | Descrição 
+------|------
+STOCK | Informações das negociações diária das empresas na B3.
+DPF | Formulário de Demonstrações Financeiras Padronizadas.
+ITR | Formulário de Informações Trimestrais.
 
 ## **Camada pre_processed**
 
