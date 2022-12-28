@@ -2,19 +2,18 @@
 
 Este é um projeto cujo objetivo principal é o desenvolvimento de um pipeline de dados capaz de fornecer o acesso a diversas informações de empresas listadas na B3 para a realização de análises fundamentalistas.
 
-As tarefas de extração de dados e pré-processamento podem ser realizadas localmente ou em cloud com um container docker ou até mesmo instalando e configurando o airflow. No entanto, para os JOBs que exigem mais esforço computacional o pipeline foi construido para utilizar o serviço EMR Serveless da AWS. Ou seja, a DAG do airflow inicia um cluster EMR que consome os dados armazenados em diversos buckets da S3 e faz as transformações necessárias nos dados. A imagem a seguir apresenta um resumo do fluxo da aplicação de dados:
+As tarefas de extração de dados e pré-processamento podem ser realizadas localmente ou em cloud por meio de um container docker ou até mesmo instalando e configurando o airflow. No entanto, para os JOBs que exigem mais esforço computacional o pipeline foi construido para utilizar o serviço EMR Serveless da AWS. Ou seja, a DAG do airflow inicia um cluster EMR que consome os dados armazenados em diversos buckets da S3 e faz as transformações necessárias nos dados. Por isso, para utilização de todo o pipeline de dados desenvolvido neste projeto é preciso ter uma conta na AWS um usuário ou role IAM com as permissões para uso do serviço EMR Serveless e acesso aos buckts da S3. 
 
+Os detalhes de como preparar o ambiente para usar esse pipeline serão abordados na seção seguinte (Preparando o ambiente), em seguida, será apresentado brevemente como o pipeline de dados esta organizado no airflow (Arquitetura do Pipeline de Dados), posteriormente mostramos o resultado desse fluxo de processamento de dados (Arquitetura do Pipeline de Dados) e, por fim, disponibilizamos uma seção de anexo com algumas informações dos dados utilizados no projeto. A imagem a seguir apresenta um resumo do fluxo da aplicação de dados:
 
 ![Pipeline de Dados](./application-flow.png)
 
 
 # Preparando o Ambiente
 
-Para rodar este pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do ubuntu disponível no repositório onde o spark também é instalado - fundamentalista_pipeline/docker/Dockerfile - ou realizar a instalação do airflow "manualmente".
+Para rodar este pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do Linux onde tanto o airflow quanto o spark são instalados. O arquivo Dockerfile é disponibilizado no repositório - fundamentalista_pipeline/docker/Dockerfile. Caso você preferir ou não tiver intimidade com docker é possível fazer a instalação do airflow "manualmente" na sua máquina ou em cloud se for o caso. Disponibilizei uma seção em um dos meus repositórios no GIT com um passo a passo para instalar o Airflow no Linux, acesse esse link: https://github.com/andre-ds/study-plan/blob/main/airflow/instalation.md e siga as instruções. Para a instalação do Spark eu sugiro usar a documentação oficial direcionada para o seu sistema operacional, fique atento para o diretório em que o spark será instalado, vamos precisar dessa informação adiante para configurar o Airflow.
 
-Caso você opte por fazer a instalação do Airflow acesse esse link: https://github.com/andre-ds/study-plan/blob/main/airflow/instalation.md e siga os passos.
-
-Se preferer usurfruir dos benefícios de um container docker, partindo da premissa que você já tem o docker devidamente instalado, basta seguir as instruções destacadas a seguir:
+Se você optou por usurfruir dos benefícios de um container docker, partindo da premissa que você já tem o docker devidamente instalado, basta seguir as instruções destacadas a seguir:
 
 ### 1. Criar a Imagem do Airflow
     
@@ -22,7 +21,7 @@ Com o terminal aberto no diretório onde o arquivo Dockerfile está, vamos gerar
 
 *docker build -f Dockerfile -t andre/airflow_spark .*
 
-andre/airflow_spark é a denominação da imagem é pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
+andre/airflow_spark é o nome da imagem escolhido por mim, desta forma, pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
 
 ### 2. Iniciar a Imagem
      
@@ -30,7 +29,7 @@ Para efetivamente rodar o container com a imagem do airflow bastar usar o seguin
 
 *docker run -p 8080:8080 -v ./fundamentalista_pipeline/airflow/dags:/opt/airflow/dags -v ./fundamentalista_pipeline/datalake:/datalake/ -v ./fundamentalista_pipeline/sparkFiles:/opt/sparkFiles -it andre/airflow_spark*
 
-Vale a pena destacar que com a instrução -p (de porta) estamos possibilitando o acesso a interface do airflow pelo navegador com o endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v (de volume). Na prática você precisa substituir pelo exato *path* do seu computador ou da instância da cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador (local) no container com o airflow instalado. 
+Vale a pena destacar que com a instrução -p (de porta) estamos possibilitando o acesso a interface do airflow pelo navegador com a porta destacada pelo endereço *http://localhost:8080*. Além disso, compartilhamos uma série de diretórios com a opção -v (de volume). Na prática você precisa substituir pelo exato *path* do seu computador ou da instância da cloud em que o repositório foi clonado. Por exemplo, as minhas dags na verdade estão em home/andre/projects/fundamentalista_pipeline/airflow/dags:/opt/airflow/dag. Esses volumes me permitem "enxergar" os arquivos do meu computador (local) no container com o airflow instalado. Caso prefira você pode fazer os ajustes no Dockerfile definindo previamente o volume ou até copiando os códigos necessários automaticamente.
 
 ### 3. Acessar o Airflow 
     
@@ -207,7 +206,9 @@ Essa camada armazena o dado da forma mais bruta possível, ou seja, o dado é ex
 Exemplo:
 
 **extracted_2021_01_08_stock.parquet**
+
 **extracted_2022_09_15_itr_cia_aberta_2021.zip**
+
 **extracted_2022_09_15_dfp_cia_aberta_2021.zip**
 
 Onde: 
@@ -237,9 +238,13 @@ Na segunda etapa, os dados são pré-processados e armazenados na camada **pre_p
 Exemplo:
 
 **pp_dfp_dre_2022.parquet**
+
 **pp_dfp_BPA_2022.parquet**
+
 **pp_itr_dre_2019.parquet**
+
 **pp_itr_BPP_2019.parquet**
+
 **pp_stock_union.parquet**
 
 Onde: 
