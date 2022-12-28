@@ -190,14 +190,15 @@ Camada | Arquivo | Onde é Salvo | Descrição
 
 # Arquitetura de Dados
 
-A figura destacada a seguir resume como o datalake está organizado em cada um dos buckets na S3.
+A figura a seguir resume como o datalake está organizado em cada um dos buckets na S3.
 
 ![Pipeline de Dados](./datalake.png)
 
 
 ## **Camada raw**
 
-Essa camada armazena o dado da forma mais bruta, ou seja, o dado é extraido e armazenado sem ser feito nenhum tipo de alteração, inclusive de formato, mantendo-se assim o formato original quando possível.
+Essa camada armazena o dado da forma mais bruta possível, ou seja, o dado é extraido e armazenado sem ser feito nenhum tipo de alteração, inclusive de formato. Quando a informação é obtida por meio de APIs o formato salvo é o parquet.
+
 
 ### Taxonomia da Nomenclatura dos Arquivos Persistidos
 
@@ -216,20 +217,18 @@ Taxonomia | Descrição
 Data de Extração | Data pela qual o arquivo foi extraído, ou seja, a data de execução da DAG.
 Tipo | Trata-se do nome do arquivo que foi disponibilizado.
 
-
-**Tipo**
-
-O tipo é indica, inicialmente, se é DFP ou ITR e o tipo da demonstração financeira.
+Os tipos de arquivos persistidos na camada raw são os seguintes:
 
 Abreviação | Descrição 
 ------|------
-STOCK | Informações das negociações diária das empresas na B3.
+STOCK | Dados das negociações diária das empresas na B3.
 DPF | Formulário de Demonstrações Financeiras Padronizadas.
 ITR | Formulário de Informações Trimestrais.
 
+
 ## **Camada pre_processed**
 
-Na segunda etapa, os dados são pré-processados e armazenados na camada **pre_processed** do datalake em formato parquet. 
+Na segunda etapa, os dados são pré-processados e armazenados na camada **pre_processed** na sua totalidade em formato parquet. 
 
 ### Taxonomia da Nomenclatura dos Arquivos Persistidos
 
@@ -238,25 +237,32 @@ Na segunda etapa, os dados são pré-processados e armazenados na camada **pre_p
 Exemplo:
 
 **pp_dfp_dre_2022.parquet**
+**pp_dfp_BPA_2022.parquet**
+**pp_itr_dre_2019.parquet**
+**pp_itr_BPP_2019.parquet**
+**pp_stock_union.parquet**
 
 Onde: 
 
 Taxonomia | Descrição 
 ------|------
 pp | Indica que os arquivos são pré-processados.
-Data de Extração | Data pela qual o arquivo foi extraído.
-Tipo | Diz respeito ao tipo do documento disponibilizado pela CVM.
+Tipo | Diz respeito ao tipo do arquivo.
 Período | Indica a janela temporal da base de dados.
 
 
-**Tipo**
+**Tipo do Arquivo Extraído**
 
 O tipo é indica, inicialmente, se é DFP ou ITR e o tipo da demonstração financeira.
 
 Abreviação | Descrição 
 ------|------
+STOCK | Dados das negociações diária das empresas na B3.
 DPF | Formulário de Demonstrações Financeiras Padronizadas.
 ITR | Formulário de Informações Trimestrais.
+
+
+**Tipo da Informação**
 
 Abreviação | Descrição 
 ------|------
@@ -268,6 +274,7 @@ DRA | Demonstração de Resultado Abrangente.
 DMPL | Demonstração das Mutações do Patrimônio Líquido.
 DFC_MD | Demonstração de Fluxo de Caixa - Método Direto.
 DFC_MI | Demonstração de Fluxo de Caixa - Método Indireto.
+UNION | Nos casos onde se trata de um arquivo unificado de vários outros.
 
 
 ### Taxonomia da Nomenclatura das Variáveis
