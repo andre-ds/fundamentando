@@ -57,7 +57,7 @@ spark | Spark | local | {"spark-submit": "/opt/spark/spark-3.3.1-bin-hadoop3"}
 
 Connection Id | Connection Type | Extra
 ------|------ |------ |
-aws_default | Amazon Web Services | {"aws_access_key_id": XXXX , "aws_secret_access_key": XXXX, "region_name": "us-east-2"}
+aws_default | Amazon Web Services |<font size="1.9">{"aws_access_key_id": XXXX , "aws_secret_access_key": XXXX, "region_name": "us-east-2"}</font>
 
 Onde XXXX serão substituídos pelos respectivos key e secret key da sua chave de acesso criados por você na sua conta da AWS. Lembrando que esse chave de ter os poderes para acessar os respectivos buckets onde os dados e códigos do pipeline são armazenados, bem como, a permissão de uso do EMR Serveless. 
 

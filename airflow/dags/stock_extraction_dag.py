@@ -1,6 +1,7 @@
 from datetime import datetime
 from utils.Utils import path_environment
 from airflow import DAG
+from airflow.models import Variable
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
@@ -8,6 +9,8 @@ from utils.Utils import load_bucket
 
 
 EXECUTION_DATE = '{{ ds }}'
+FUNDAMENTUS_RAW_STOCK = Variable.get('FUNDAMENTUS_RAW_STOCK')
+FUNDAMENTUS_PRE_PROCESSED_STOCK = Variable.get('FUNDAMENTUS_PRE_PROCESSED_STOCK')
 
 
 with DAG(
@@ -36,7 +39,7 @@ with DAG(
         task_id='upload_s3_raw_ticker_id',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket':'fundamentus-raw-stock',
+            'bucket':f'{FUNDAMENTUS_RAW_STOCK}',
             'dataType':'raw-stock',
             'execution_date':EXECUTION_DATE,
             'delete':True,
@@ -56,7 +59,7 @@ with DAG(
         task_id='upload_s3_union_id',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket':'fundamentus-pre-processed-stock',
+            'bucket':f'{FUNDAMENTUS_PRE_PROCESSED_STOCK}',
             'dataType':'pre-processed-stock',
             'execution_date':EXECUTION_DATE,
             'delete':True,
