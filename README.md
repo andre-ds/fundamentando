@@ -85,10 +85,12 @@ Essas variáveis de ambiente serão utilizadas para as DAGs *analytical_dre_dag.
 
 Definina cada Key e o respectivo campo Val com o nome do bucket onde serão armazenados os dados.
 
-- FUNDAMENTUS_RAW_ITR: ITR camada RAW;
-- FUNDAMENTUS_PRE_PROCESSED_ITR: ITR camada PRE-PROCESSED;
-- FUNDAMENTUS_RAW_DFP: DFP camada RAW;
-- FUNDAMENTUS_PRE_PROCESSED_DFP: DFP camada PRE-PROCESSED.
+- FUNDAMENTUS_RAW_STOCK
+- FUNDAMENTUS_PRE_PROCESSED_STOCK
+- FUNDAMENTUS_RAW_ITR
+- FUNDAMENTUS_PRE_PROCESSED_ITR
+- FUNDAMENTUS_RAW_DFP
+- FUNDAMENTUS_PRE_PROCESSED_DFP
 
 
 # Arquitetura do Pipeline de Dados
