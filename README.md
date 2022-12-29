@@ -158,8 +158,8 @@ Etapa final da criação das variáveis da camada analítica.
 
 Camada | Arquivo | Onde é Salvo | Descrição
 ------|------ |------ |------ 
-<font size="1.8">ANALYTICAL</font> | <font size="1.8">analytical_stock_price_temp.parquet</font> | <font size="1.8">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.8">O JOB depende do arquivo pp_stock_union.parquet da DAG anterior.</font>
-<font size="1.8">ANALYTICAL</font> | <font size="1.8">analytical_stock_price.parquet</font> | <font size="1.8">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.8">É necessário atualizar o o objeto DIR_S3_ANALYTICAL com o nome do bucket da camada analítica do seu datalake.</font>
+<font size="1.7">ANALYTICAL</font> | <font size="1.7">analytical_stock_price_temp.parquet</font> | <font size="1.8">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.7">O JOB depende do arquivo pp_stock_union.parquet da DAG anterior.</font>
+<font size="1.7">ANALYTICAL</font> | <font size="1.7">analytical_stock_price.parquet</font> | <font size="1.8">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.7">É necessário atualizar o o objeto DIR_S3_ANALYTICAL com o nome do bucket da camada analítica do seu datalake.</font>
 
 
 ## cvm_itr_dag e cvm_dfp_dag
