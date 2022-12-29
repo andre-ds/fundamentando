@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from airflow import DAG
+from airflow.models import Variable
 from groups.group_extractions_cvm import extraction_cvm
 from groups.group_pre_processing_cvm import pre_processing_cvm
 from utils.Utils import path_environment, unzippded_files, load_bucket
@@ -8,6 +9,9 @@ from airflow.operators.python import PythonOperator
 
 
 EXECUTION_DATE = '{{ ds }}'
+FUNDAMENTUS_RAW_ITR = Variable.get('FUNDAMENTUS_RAW_ITR')
+FUNDAMENTUS_PRE_PROCESSED_ITR = Variable.get('FUNDAMENTUS_PRE_PROCESSED_ITR')
+
 
 with DAG(
     dag_id='cvm_itr',
@@ -27,7 +31,7 @@ with DAG(
         task_id='upload_s3_raw_itr',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket': 'fundamentus-raw-itr',
+            'bucket': f'{FUNDAMENTUS_RAW_ITR}',
             'dataType': 'raw-itr',
             'execution_date': EXECUTION_DATE,
         }
@@ -49,7 +53,7 @@ with DAG(
         task_id='upload_s3_pp_itr',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket': 'fundamentus-pre-processed-itr',
+            'bucket': FUNDAMENTUS_PRE_PROCESSED_ITR,
             'dataType': 'pre-processed-itr',
             'execution_date': EXECUTION_DATE,
             'delete':True,

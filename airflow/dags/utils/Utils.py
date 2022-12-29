@@ -184,9 +184,8 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
                         hook.load_file(filename=f'{DIR_PATH_PARTITION}/{file}', bucket_name=bucket, key=f'pp_stock_union.parquet/{folder}/{file}', replace=True)
                 else:
                     hook.load_file(filename=f'{DIR_PATH_PARTITION}', bucket_name=bucket, key=f'pp_stock_union.parquet/{folder}', replace=True)
-
-
-    hook = S3Hook('s3_conn')
+    # s3_conn
+    hook = S3Hook('aws_default')
     extract_at = execution_date.replace('-', '_')
     print(extract_at)
 

@@ -39,38 +39,63 @@ A partir de agora precisamos fazer algumas configurações no airflow para poder
 
 # Configurando o Airflow
 
-Dado a maneira como o docker foi desenvolvido, cada vez que o container for iniciado se faz necessário criar três conexões e duas variáveis. 
-
-Para adicionar as variáveis de ambiente no Airflow acesse o menu *Admin* seguido por *Variables*. Adicione a Key EMR_FUNDAMENTUS com o IAM da AWS com role para acessar buckets da S3 e o serviço EMR. Essa variável de ambiente vai permitir que possamos usar o serviço da EMR Serveless, caso você não saiba criá-la leia as instruções da documentação da AWS - Getting started with Amazon EMR Serverless: https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-set-up.html#create-an-admin.
-
-A segunda variávei de ambiente define o bucket S3 que serrão armazenados os logs dos dos processos do EMR Serveless. O Key da variávei é S3_LOGS_BUCKET e o bucket que irá no campo Val é fundamentus-codes. 
-
-Essas variáveis de ambiente serão utilizadas para as DAGs *analytical_dre_dag.py* e *analytical_stock_price_dag.py*.
-
-Quanto as conexões para criá-las acesse *Admin* e *Connection*, é preciso criar três conexões:
+Dado a maneira como o docker foi desenvolvido, cada vez que o container for iniciado é necessário configurar o Airflow com três conexões e duas variáveis.
 
 
-**Conexão do Spark**
+### 1.Conexão do Spark
+
+Para criar as conexões no Airflow acesse o menu *Admin* seguido de *Connection*. A partir disso siga o padrão definido nas tabelas, ou seja, *Connection Id* prenecha com spark, *Connection Type* selecione Spark e assim por diante. O mesmo ocorre para a coneção da AWS Geral.
+
 Connection Id | Connection Type | Host | Extra
 ------|------ |------ |------ |
 spark | Spark | local | {"spark-submit": "/opt/spark/spark-3.3.1-bin-hadoop3"}
 
 *Obs: a versão 3.3.1 do Spark é instalada no Dockerfile, caso você instale outra versão é preciso fazer o ajuste tanto do path quanto da versão na conexão.*
 
-**Conexão do S3**
-Connection Id | Connection Type | Extra
-------|------ |------ |
-s3_conn | Amazon Web Services | {"aws_access_key_id":XXXX, "aws_secret_access_key": XXXX}
 
-*Onde XXXX serão substituídos pelos respectivos key e secret key de acesso aos buckts criados por você na sua conta da AWS.*
-
-**Conexão do AWS Geral**
+### 2. Conexão do AWS Geral
 
 Connection Id | Connection Type | Extra
 ------|------ |------ |
 aws_default | Amazon Web Services | {"aws_access_key_id": XXXX , "aws_secret_access_key": XXXX, "region_name": "us-east-2"}
 
-*Obs: Essa conexão é utilizada pelo serviço EMR Serveless. Específicamente no meu caso o serviço é executado na região us-east-2. Faça as substituições de acordo com a sua necessidade.*
+Onde XXXX serão substituídos pelos respectivos key e secret key da sua chave de acesso criados por você na sua conta da AWS. Lembrando que esse chave de ter os poderes para acessar os respectivos buckets onde os dados e códigos do pipeline são armazenados, bem como, a permissão de uso do EMR Serveless. 
+
+*Obs: Específicamente no meu caso o serviço é executado na região us-east-2 e todos os buckets estão nessa região. Faça as substituições de acordo com a sua necessidade.*
+
+
+### 3. Variávei EMR_FUNDAMENTUS
+  
+Para adicionar variáveis de ambiente no Airflow acesse o menu *Admin* seguido por *Variables*. Adicione a Key EMR_FUNDAMENTUS com o IAM da AWS com role para acessar buckets da S3 e a autorização para usar o serviço EMR Serveless.
+
+Caso você não saiba criá-la leia as instruções da documentação da AWS - Getting started with Amazon EMR Serverless: https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/getting-started.html#gs-prerequisites. Acesse a seção *Grant permissions to use EMR Serverless*.
+
+### 4. Variávei S3_LOGS_BUCKET
+
+A segunda variávei de ambiente define qual é o nome do bucket S3 que serão armazenados os logs dos processos que utilizam o EMR Serveless. O Key da variávei é S3_LOGS_BUCKET e o bucket que irá no campo Val no meu caso é o fundamentus-codes. Faça o ajuste conforme a nomenclatura utilizada por você na criação do cluster.
+
+Essas variáveis de ambiente serão utilizadas para as DAGs *analytical_dre_dag.py* e *analytical_stock_price_dag.py*.
+
+
+### 5. Variávei FUNDAMENTUS_RAW_ITR
+
+Definina o Key com FUNDAMENTUS_RAW_ITR e o campo Val com o nome do bucket onde serão armazenados os dados ITR da camada RAW.
+
+
+### 6. Variávei FUNDAMENTUS_PRE_PROCESSED_ITR
+
+Definina o Key com FUNDAMENTUS_PRE_PROCESSED_ITR e o campo Val com o nome do bucket onde serão armazenados os dados ITR da camada PRE-PROCESSED.
+
+
+### 7. Variávei FUNDAMENTUS_RAW_DFP
+
+Definina o Key com FUNDAMENTUS_RAW_DFP e o campo Val com o nome do bucket onde serão armazenados os dados DFP da camada RAW.
+
+
+### 8. Variávei FUNDAMENTUS_PRE_PROCESSED_DFP
+
+Definina o Key com FUNDAMENTUS_PRE_PROCESSED_DFP e o campo Val com o nome do bucket onde serão armazenados os dados DFP da camada PRE-PROCESSED.
+
 
 # Arquitetura do Pipeline de Dados
 

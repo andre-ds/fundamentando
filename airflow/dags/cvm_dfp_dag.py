@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from airflow import DAG
+from airflow.models import Variable
 from groups.group_extractions_cvm import extraction_cvm
 from groups.group_pre_processing_cvm import pre_processing_cvm
 from utils.Utils import path_environment, unzippded_files, load_bucket
@@ -9,6 +10,8 @@ from airflow.operators.bash_operator import BashOperator
 
 
 EXECUTION_DATE = '{{ ds }}'
+FUNDAMENTUS_RAW_DFP = Variable.get('FUNDAMENTUS_RAW_DFP')
+FUNDAMENTUS_PRE_PROCESSED_DFP = Variable.get('FUNDAMENTUS_PRE_PROCESSED_DFP')
 
 
 with DAG(
@@ -29,7 +32,7 @@ with DAG(
         task_id='upload_s3_raw_dfp',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket': 'fundamentus-raw-dfp',
+            'bucket': f'{FUNDAMENTUS_RAW_DFP}',
             'dataType': 'raw-dfp',
             'execution_date': EXECUTION_DATE,
         }
@@ -51,7 +54,7 @@ with DAG(
         task_id='upload_s3_pp_dfp',
         python_callable=load_bucket,
         op_kwargs={
-            'bucket': 'fundamentus-pre-processed-dfp',
+            'bucket': f'{FUNDAMENTUS_PRE_PROCESSED_DFP}',
             'dataType': 'pre-processed-dfp',
             'execution_date': EXECUTION_DATE,
             'delete':True,
