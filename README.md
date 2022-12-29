@@ -135,8 +135,8 @@ Código responsável por unificar a precificação diária de cada empresa em um
 
 Camada | Arquivo | Onde é Salvo | Descrição
 ------|------ |------ |------ 
-<font size="1.9">RAW</font> | <font size="1.9">extracted_{extract_at}_stock.parquet</font> | <font size="1.9">Definido pelo JOB upload_s3_raw_ticker parâmetro *bucket*</font>  | <font size="1.9">Preço dos ativos em um determinado período, onde extract_at é a referente data de extração.</font>
-<font size="1.9">PRE-PROCESSED</font> | <font size="1.9">pp_stock_union.parquet</font> | <font size="1.9">Definido pelo JOB upload_upload_s3_unions3_raw_ticker parâmetro *bucket*</font> | <font size="1.9">É a união de todos os arquivos de preços diários da camada RAW.</font>
+<font size="1.5">RAW</font> | <font size="1.5">extracted_{extract_at}_stock.parquet</font> | <font size="1.5">FUNDAMENTUS_RAW_STOCK</font>  | <font size="1.9">Preço dos ativos em um determinado período, onde extract_at é a referente data de extração.</font>
+<font size="1.5">PRE-PROCESSED</font> | <font size="1.9">pp_stock_union.parquet</font> | <font size="1.5">FUNDAMENTUS_PRE_PROCESSED_STOCK</font> | <font size="1.5">É a união de todos os arquivos de preços diários da camada RAW.</font>
 
 
 ## analytical_stock_price_dag
@@ -158,8 +158,8 @@ Etapa final da criação das variáveis da camada analítica.
 
 Camada | Arquivo | Onde é Salvo | Descrição
 ------|------ |------ |------ 
-<font size="1.7">ANALYTICAL</font> | <font size="1.7">analytical_stock_price_temp.parquet</font> | <font size="1.8">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.7">O JOB depende do arquivo pp_stock_union.parquet da DAG anterior.</font>
-<font size="1.7">ANALYTICAL</font> | <font size="1.7">analytical_stock_price.parquet</font> | <font size="1.8">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.7">É necessário atualizar o o objeto DIR_S3_ANALYTICAL com o nome do bucket da camada analítica do seu datalake.</font>
+<font size="1.5">ANALYTICAL</font> | <font size="1.7">analytical_stock_price_temp.parquet</font> | <font size="1.5">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.5">O JOB depende do arquivo pp_stock_union.parquet da DAG anterior.</font>
+<font size="1.5">ANALYTICAL</font> | <font size="1.7">analytical_stock_price.parquet</font> | <font size="1.5">Definido pelo objeto DIR_S3_ANALYTICAL em sparkFiles/sparkDocuments</font>  | <font size="1.5">É necessário atualizar o o objeto DIR_S3_ANALYTICAL com o nome do bucket da camada analítica do seu datalake.</font>
 
 
 ## cvm_itr_dag e cvm_dfp_dag
