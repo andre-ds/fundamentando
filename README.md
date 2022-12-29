@@ -64,37 +64,31 @@ Onde XXXX serão substituídos pelos respectivos key e secret key da sua chave d
 *Obs: Específicamente no meu caso o serviço é executado na região us-east-2 e todos os buckets estão nessa região. Faça as substituições de acordo com a sua necessidade.*
 
 
-### 3. Variávei EMR_FUNDAMENTUS
+### 3. Variáveis de Ambiente
   
-Para adicionar variáveis de ambiente no Airflow acesse o menu *Admin* seguido por *Variables*. Adicione a Key EMR_FUNDAMENTUS com o IAM da AWS com role para acessar buckets da S3 e a autorização para usar o serviço EMR Serveless.
+Para adicionar variáveis de ambiente no Airflow acesse o menu *Admin* seguido por *Variables*. 
+
+**EMR_FUNDAMENTUS**
+
+Adicione a Key EMR_FUNDAMENTUS com o IAM da AWS com role para acessar buckets da S3 e a autorização para usar o serviço EMR Serveless.
 
 Caso você não saiba criá-la leia as instruções da documentação da AWS - Getting started with Amazon EMR Serverless: https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/getting-started.html#gs-prerequisites. Acesse a seção *Grant permissions to use EMR Serverless*.
 
-### 4. Variávei S3_LOGS_BUCKET
+**S3_LOGS_BUCKET**
 
 A segunda variávei de ambiente define qual é o nome do bucket S3 que serão armazenados os logs dos processos que utilizam o EMR Serveless. O Key da variávei é S3_LOGS_BUCKET e o bucket que irá no campo Val no meu caso é o fundamentus-codes. Faça o ajuste conforme a nomenclatura utilizada por você na criação do cluster.
 
 Essas variáveis de ambiente serão utilizadas para as DAGs *analytical_dre_dag.py* e *analytical_stock_price_dag.py*.
 
 
-### 5. Variávei FUNDAMENTUS_RAW_ITR
+**Variáveis dos Buckets** 
 
-Definina o Key com FUNDAMENTUS_RAW_ITR e o campo Val com o nome do bucket onde serão armazenados os dados ITR da camada RAW.
+Definina cada Key e o respectivo campo Val com o nome do bucket onde serão armazenados os dados.
 
-
-### 6. Variávei FUNDAMENTUS_PRE_PROCESSED_ITR
-
-Definina o Key com FUNDAMENTUS_PRE_PROCESSED_ITR e o campo Val com o nome do bucket onde serão armazenados os dados ITR da camada PRE-PROCESSED.
-
-
-### 7. Variávei FUNDAMENTUS_RAW_DFP
-
-Definina o Key com FUNDAMENTUS_RAW_DFP e o campo Val com o nome do bucket onde serão armazenados os dados DFP da camada RAW.
-
-
-### 8. Variávei FUNDAMENTUS_PRE_PROCESSED_DFP
-
-Definina o Key com FUNDAMENTUS_PRE_PROCESSED_DFP e o campo Val com o nome do bucket onde serão armazenados os dados DFP da camada PRE-PROCESSED.
+- FUNDAMENTUS_RAW_ITR: ITR da camada RAW;
+- FUNDAMENTUS_PRE_PROCESSED_ITR: ITR da camada PRE-PROCESSED;
+- FUNDAMENTUS_RAW_DFP: DFP da camada RAW;
+- FUNDAMENTUS_PRE_PROCESSED_DFP: DFP da camada PRE-PROCESSED.
 
 
 # Arquitetura do Pipeline de Dados
