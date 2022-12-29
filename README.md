@@ -135,8 +135,8 @@ Código responsável por unificar a precificação diária de cada empresa em um
 
 Camada | Arquivo | Onde é Salvo | Descrição
 ------|------ |------ |------ 
-<font size="1.5">RAW</font> | <font size="1.5">extracted_{extract_at}_stock.parquet</font> | <font size="1.5">FUNDAMENTUS_RAW_STOCK</font>  | <font size="1.9">Preço dos ativos em um determinado período, onde extract_at é a referente data de extração.</font>
-<font size="1.5">PRE-PROCESSED</font> | <font size="1.9">pp_stock_union.parquet</font> | <font size="1.5">FUNDAMENTUS_PRE_PROCESSED_STOCK</font> | <font size="1.5">É a união de todos os arquivos de preços diários da camada RAW.</font>
+<font size="1.5">RAW</font> | <font size="1.5">extracted_{extract_at}_stock.parquet</font> | <font size="1.5">Variável de ambiente FUNDAMENTUS_RAW_STOCK</font>  | <font size="1.9">Preço dos ativos em um determinado período, onde extract_at é a referente data de extração.</font>
+<font size="1.5">PRE-PROCESSED</font> | <font size="1.9">pp_stock_union.parquet</font> | <font size="1.5">Variável de ambiente FUNDAMENTUS_PRE_PROCESSED_STOCK</font> | <font size="1.5">É a união de todos os arquivos de preços diários da camada RAW.</font>
 
 
 ## analytical_stock_price_dag
