@@ -41,6 +41,23 @@ class PreProcessing():
         return dataset
 
 
+    def files_list(self, type_file):
+        
+        #years_list = [*range(2011, date.today().year+1, 1)]
+        years_list = [*range(2011, 2023, 1)]
+        files_list = []
+        for y in years_list:
+            if type_file == 'itr_itr_dfp':
+                zip_files = [f'pp_itr_dre_{y}.parquet', f'pp_dfp_dre_{y}.parquet']
+            elif type_file == 'dfp_all':
+                zip_files = [ f'pp_dfp_dre_{y}.parquet', f'pp_dfp_bpa_{y}.parquet', f'pp_dfp_bpp_{y}.parquet']
+            elif type_file == 'itr_all':
+                zip_files = [ f'pp_itr_dre_{y}.parquet', f'pp_itr_bpa_{y}.parquet', f'pp_itr_bpp_{y}.parquet']
+            files_list.append(zip_files)
+
+        return files_list
+
+
     def _union_quarters(self, dataset_itr:DataFrame, dataset_dfp:DataFrame) -> DataFrame:
 
         # Agregations Q1, Q2 and Q3
@@ -49,19 +66,19 @@ class PreProcessing():
             lit(None).alias('dt_fim_exerc'),
             lit(None).alias('dt_ini_exerc'),
             lit(None).alias('dt_quarter'),
-            sum('cost_goods_and_services').alias('cost_goods_and_services'), \
-            sum('earnings_before_income_tax_and_social_contribution').alias('earnings_before_income_tax_and_social_contribution'), \
-            sum('earnings_before_interest_and_taxes').alias('earnings_before_interest_and_taxes'), \
-            sum('financial_results').alias('financial_results'), \
-            sum('groos_revenue').alias('groos_revenue'), \
-            sum('net_profit').alias('net_profit'), \
-            sum('operating_revenues_and_expenses').alias('operating_revenues_and_expenses'), \
-            sum('sales_revenue').alias('sales_revenue'))
+            sum('amt_cost_goods_and_services').alias('amt_cost_goods_and_services'), \
+            sum('amt_earnings_before_income_tax_and_social_contribution').alias('amt_earnings_before_income_tax_and_social_contribution'), \
+            sum('amt_earnings_before_interest_and_taxes').alias('amt_earnings_before_interest_and_taxes'), \
+            sum('amt_financial_results').alias('amt_financial_results'), \
+            sum('amt_groos_revenue').alias('amt_groos_revenue'), \
+            sum('amt_net_profit').alias('amt_net_profit'), \
+            sum('amt_operating_revenues_and_expenses').alias('amt_operating_revenues_and_expenses'), \
+            sum('amt_sales_revenue').alias('amt_sales_revenue'))
 
         # Changing sinal for sumation
-        varlist = ['cost_goods_and_services', 'earnings_before_income_tax_and_social_contribution',
-        'earnings_before_interest_and_taxes', 'financial_results', 'groos_revenue',
-        'net_profit', 'operating_revenues_and_expenses', 'sales_revenue']
+        varlist = ['amt_cost_goods_and_services', 'amt_earnings_before_income_tax_and_social_contribution',
+        'amt_earnings_before_interest_and_taxes', 'amt_financial_results', 'amt_groos_revenue',
+        'amt_net_profit', 'amt_operating_revenues_and_expenses', 'amt_sales_revenue']
         for v in varlist:
             df_sum = df_sum.withColumn(v, -col(v))
 
@@ -72,14 +89,14 @@ class PreProcessing():
             max('dt_fim_exerc').alias('dt_fim_exerc'), \
             max('dt_ini_exerc').alias('dt_ini_exerc'), \
             max('dt_quarter').alias('dt_quarter'), \
-            sum('cost_goods_and_services').alias('cost_goods_and_services'), \
-            sum('earnings_before_income_tax_and_social_contribution').alias('earnings_before_income_tax_and_social_contribution'), \
-            sum('earnings_before_interest_and_taxes').alias('earnings_before_interest_and_taxes'), \
-            sum('financial_results').alias('financial_results'), \
-            sum('groos_revenue').alias('groos_revenue'), \
-            sum('net_profit').alias('net_profit'), \
-            sum('operating_revenues_and_expenses').alias('operating_revenues_and_expenses'), \
-            sum('sales_revenue').alias('sales_revenue'))
+            sum('amt_cost_goods_and_services').alias('amt_cost_goods_and_services'), \
+            sum('amt_earnings_before_income_tax_and_social_contribution').alias('amt_earnings_before_income_tax_and_social_contribution'), \
+            sum('amt_earnings_before_interest_and_taxes').alias('amt_earnings_before_interest_and_taxes'), \
+            sum('amt_financial_results').alias('amt_financial_results'), \
+            sum('amt_groos_revenue').alias('amt_groos_revenue'), \
+            sum('amt_net_profit').alias('amt_net_profit'), \
+            sum('amt_operating_revenues_and_expenses').alias('amt_operating_revenues_and_expenses'), \
+            sum('amt_sales_revenue').alias('amt_sales_revenue'))
 
         # Union with quarters datasets
         dataset = dataset_itr.union(dataset_q4.select(dataset_itr.columns))
@@ -312,7 +329,7 @@ class PreProcessing():
             list_files = [file for file in os.listdir(DIR_PATH_RAW_ITR) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
         elif dataType == 'dfp_dre' or dataType == 'dfp_bpp' or dataType == 'dfp_bpa':
             list_files = [file for file in os.listdir(DIR_PATH_RAW_DFP) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
-    
+
 
         for file in list_files:
             if year == file[-8:-4]:

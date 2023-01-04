@@ -15,7 +15,7 @@ def _pp_union_dre():
     
     import os
     from pyspark.sql import SparkSession
-    from sparkDocuments import schema_pp_dre, DIR_S3_RAW_DFP,  DIR_S3_RAW_ITR, DIR_S3_ANALYTICAL
+    from sparkDocuments import schema_pp_dre, DIR_S3_PRE_PROCESSED_DFP,  DIR_S3_PRE_PROCESSED_ITR, DIR_S3_ANALYTICAL
     from PreProcessing import PreProcessing
   
     sk = SparkSession.builder.getOrCreate()
@@ -27,18 +27,20 @@ def _pp_union_dre():
 
     print('open dataset')
     files_list = __files_list()       
-    for file in files_list:
-        dataset_itr = sk.read.parquet(os.path.join(DIR_S3_RAW_ITR, file[0]))
-        dataset_dfp = sk.read.parquet(os.path.join(DIR_S3_RAW_DFP, file[1]))
-        df = pp._union_quarters(dataset_itr=dataset_itr, dataset_dfp=dataset_dfp)
-        dataset = dataset.union(df)
+    try:         
+        for file in files_list:
+            dataset_itr = sk.read.parquet(os.path.join(DIR_S3_PRE_PROCESSED_ITR, file[0]))
+            dataset_dfp = sk.read.parquet(os.path.join(DIR_S3_PRE_PROCESSED_DFP, file[1]))
+            df = pp._union_quarters(dataset_itr=dataset_itr, dataset_dfp=dataset_dfp)
+            dataset = dataset.union(df)
 
-    # Saving
-    print('saving')
-    dataset.write.format('parquet') \
-        .mode('overwrite') \
-       .save(os.path.join(DIR_S3_ANALYTICAL, 'pp_dre_union.parquet'))  
- 
+        # Saving
+        print('saving')
+        dataset.write.format('parquet') \
+            .mode('overwrite') \
+        .save(os.path.join(DIR_S3_ANALYTICAL, 'pp_dre_union.parquet'))  
+    except:
+        print('The file is not available!')   
 
 if __name__ == "__main__":
 

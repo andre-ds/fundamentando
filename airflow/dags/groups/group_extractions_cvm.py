@@ -24,7 +24,10 @@ def _extraction_cvm(ti, dataType:str, year:int, execution_date:str):
     
 
     if 'dfp' in dataType:
-        urllib.request.urlretrieve(repository_DFP+f'dfp_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW_DFP, f'extracted_{extract_at}_dfp_cia_aberta_{year}.zip'))
+        try:
+            urllib.request.urlretrieve(repository_DFP+f'dfp_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW_DFP, f'extracted_{extract_at}_dfp_cia_aberta_{year}.zip'))
+        except:
+            print(f'The file dfp_cia_aberta_{year}.zip is not avaliable.')
     # Quarter (quarterly) 
     if 'itr' in dataType:
         try:

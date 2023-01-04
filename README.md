@@ -91,7 +91,7 @@ Definina cada Key e o respectivo campo Val com o nome do bucket onde serão arma
 - FUNDAMENTUS_PRE_PROCESSED_ITR
 - FUNDAMENTUS_RAW_DFP
 - FUNDAMENTUS_PRE_PROCESSED_DFP
-
+- FUNDAMENTUS_ANALYTICAL
 
 # Arquitetura do Pipeline de Dados
 
@@ -117,7 +117,7 @@ analytical_stock_price_dag | Dag de criação de variáveis relacionadadas com o
 cvm_itr_dag | Dag de extração e pré-processamento dos dados financeiros ITR cuja fonte de dados é a CVM.
 cvm_dfp_dag | Dag de extração e pré-processamento dos dados financeiros DFP cuja fonte de dados é a CVM.
 analytical_dre_dag | Dag responsável pela criação de variáveis analíticas relacionadas aos dados de DRE.
-
+analytical_financial_information_dag | Dag responsável pela integração das informações de cotação, pagamento de dividendos, DRE, BPA e BPE em um único dataset. 
 
 ## stock_extraction_dag
 
@@ -206,6 +206,23 @@ Etapa final da criação das variáveis da camada analítica das informações d
 Camada | Arquivo | Onde é Salvo | Descrição
 ------|------ |------ |------ 
 <font size="1.9">ANALYTICAL</font> | <font size="1.9">analytical_dre.parquet</font> | <font size="1.9">No bucket definido pelo objeto DIR_S3_ANALYTICAL que é salvo em sparkFiles/sparkDocuments</font>  | <font size="1.9">-</font>
+
+
+## analytical_financial_information_dag
+
+Nesta etapa para facilitar diversas análises os dados referente a cotação, pagamento de dividendos e das informações financeiras das empresas são consolidados em uma única visão
+
+**pp_union_fin_dfp**: sparkFiles/financial_information_analytical.py
+
+Integração sob a perspectiva anual (DFP).
+
+**pp_union_fin_itr**: sparkFiles/financial_information_analytical.py
+
+Integração sob a perspectiva trimestral (ITR).
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">ANALYTICAL</font> | <font size="1.9">analytical_FPD_financial_information.parquet/analytical_ITR_financial_information.parquet</font> | <font size="1.9">No bucket definido pelo objeto DIR_S3_ANALYTICAL que é salvo em sparkFiles/sparkDocuments</font>  | <font size="1.9">-</font>
 
 
 # Arquitetura de Dados
@@ -405,11 +422,26 @@ Abreviação | Descrição
 
 ## Dicionário de Dados Brutos CVM
 
-**Documentos: Formulário de Demonstrações Financeiras Padronizadas (DFP)**
+ ### Formulário Cadastral (FCA)
+
+Trata-se de um documento obrigatório com uma série de informações cadastrais de envio periódico e eventual, previsto no artigo 21, inciso I, da Instrução CVM nº 480/09. Conjunto de dados disponibilizado:
+
+* fca_cia_aberta_geral (Seção 1 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_pais_estrangeiro_negociacao (Itens 1.14 e 1.15 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_canal_divulgacao (Item 1.24 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_endereco (Itens 1.25 a 1.30 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_valor_mobiliario (Seção 2 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_auditor (Seção 3 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_escriturador (Seção 4 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_dri (Seção 5 do Anexo 22 da ICVM 480)
+* fca_cia_aberta_departamento_acionistas (Seção 6 do Anexo 22 da ICVM 480)
+ 
+ 
+ ### Documentos: Formulário de Demonstrações Financeiras Padronizadas (DFP)**
 
 O Formulário de Demonstrações Financeiras Padronizadas (DFP) é formado por um conjunto de documentos encaminhados periodicamente devido a normativa 480/09 da CVM.
 
-**Formulário de Informações Trimestrais (ITR)**
+ ### Formulário de Informações Trimestrais (ITR)**
 
 O ITR é semlhante ao DFP, exeto pelo fato de conter informações contáveis trimestrais.
 

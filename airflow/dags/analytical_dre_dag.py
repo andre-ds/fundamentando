@@ -23,7 +23,7 @@ DEFAULT_MONITORING_CONFIG = {
 with DAG(
     dag_id='analytical_dre',
     start_date=datetime(2022, 10, 6),
-    schedule_interval='10 18 * * 1-5',
+    schedule_interval='10 19 * * 1-5',
     catchup=False
 
 ) as dag:

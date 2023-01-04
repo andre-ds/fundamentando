@@ -11,7 +11,10 @@ DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
 DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
 DIR_PATH_ANALYTICAL = os.path.join(PATH_DATALAKE, 'analytical')
 
-
+DIR_S3_RAW_DFP = 's3://fundamentus-raw-dfp'
+DIR_S3_RAW_ITR = 's3://fundamentus-raw-itr'
+DIR_S3_PRE_PROCESSED_ITR = 's3://fundamentus-pre-processed-itr'
+DIR_S3_PRE_PROCESSED_DFP = 's3://fundamentus-pre-processed-dfp'
 DIR_S3_PROCESSED_STOCKS = 's3://fundamentus-pre-processed-stock'
 DIR_S3_ANALYTICAL = 's3://fundamentus-analytical'
 
@@ -21,7 +24,7 @@ types_dict = {
             'itr_bpp':'itr_cia_aberta_BPP_con',
             'itr_bpa':'itr_cia_aberta_BPA_con',
             'dfp_dre':'dfp_cia_aberta_DRE_con',
-            'dfp_bpp':'itr_cia_aberta_BPP_con',
+            'dfp_bpp':'dfp_cia_aberta_BPP_con',
             'dfp_bpa':'dfp_cia_aberta_BPA_con'
         }
 
@@ -36,23 +39,32 @@ bpp_account = {
 }
 
 bpa_account = {
-            '1':'total_assets',
-            '1.01':'current_assets',
-            '1.01.01':'cash_and_cash_equivalents',
-            '1.01.04':'stocks',
-            '1.02':'non_current_assets'
+            '1':'amt_total_assets',
+            '1.01':'amt_current_assets',
+            '1.01.01':'amt_cash_and_cash_equivalents',
+            '1.01.04':'amt_stocks',
+            '1.02':'amt_non_current_assets'
 }
 
 dre_account = {
-            '3.01':'sales_revenue',
-            '3.02':'cost_goods_and_services',
-            '3.03':'groos_revenue',
-            '3.04':'operating_revenues_and_expenses',
-            '3.05':'earnings_before_interest_and_taxes',
-            '3.06':'financial_results',
-            '3.07':'earnings_before_income_tax_and_social_contribution',
-            '3.11':'net_profit'
+            '3.01':'amt_sales_revenue',
+            '3.02':'amt_cost_goods_and_services',
+            '3.03':'amt_groos_revenue',
+            '3.04':'amt_operating_revenues_and_expenses',
+            '3.05':'amt_earnings_before_interest_and_taxes',
+            '3.06':'amt_financial_results',
+            '3.07':'amt_earnings_before_income_tax_and_social_contribution',
+            '3.11':'amt_net_profit'
 }
+
+
+varlist_financial_information_analytical = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'processed_at',
+                'amt_cost_goods_and_services', 'amt_earnings_before_income_tax_and_social_contribution',
+                'amt_earnings_before_interest_and_taxes', 'amt_financial_results', 'amt_groos_revenue',
+                'amt_net_profit', 'amt_operating_revenues_and_expenses', 'amt_sales_revenue',
+                'amt_cash_and_cash_equivalents', 'amt_current_assets', 'amt_non_current_assets',
+                'amt_total_assets', 'amt_current_liabilities', 'amt_loans_credits',
+                'amt_net_equity', 'amt_non_current_liabilities', 'amt_total_liabilities']
 
 
 schema_dre = StructType([
@@ -113,14 +125,49 @@ schema_pp_dre = StructType([
     StructField('dt_ini_exerc', DateType(), True),
     StructField('dt_year', IntegerType(), True),
     StructField('dt_quarter', IntegerType(), True),
-    StructField('cost_goods_and_services', FloatType(), True),
-    StructField('earnings_before_income_tax_and_social_contribution',
+    StructField('amt_cost_goods_and_services', FloatType(), True),
+    StructField('amt_earnings_before_income_tax_and_social_contribution',
                 FloatType(), True),
-    StructField('earnings_before_interest_and_taxes', FloatType(), True),
-    StructField('financial_results', FloatType(), True),
-    StructField('groos_revenue', FloatType(), True),
-    StructField('net_profit', FloatType(), True),
-    StructField('operating_revenues_and_expenses', FloatType(), True),
-    StructField('sales_revenue', FloatType(), True),
+    StructField('amt_earnings_before_interest_and_taxes', FloatType(), True),
+    StructField('amt_financial_results', FloatType(), True),
+    StructField('amt_groos_revenue', FloatType(), True),
+    StructField('amt_net_profit', FloatType(), True),
+    StructField('amt_operating_revenues_and_expenses', FloatType(), True),
+    StructField('amt_sales_revenue', FloatType(), True),
     StructField('processed_at', DateType(), True),
 ])
+
+
+schema_pp_bpa_bpp = StructType([
+    StructField('id_cvm', StringType(), True),
+    StructField('id_cnpj', StringType(), True),
+    StructField('txt_company_name', StringType(), True),
+    StructField('dt_year', IntegerType(), True),
+    StructField('dt_quarter', IntegerType(), True),
+    StructField('processed_at', DateType(), True),
+    StructField('amt_cost_goods_and_services', FloatType(), True),
+    StructField('amt_earnings_before_income_tax_and_social_contribution', FloatType(), True),
+    StructField('amt_earnings_before_interest_and_taxes', FloatType(), True),
+    StructField('amt_financial_results', FloatType(), True),
+    StructField('amt_groos_revenue', FloatType(), True),
+    StructField('amt_net_profit', FloatType(), True),
+    StructField('amt_operating_revenues_and_expenses', FloatType(), True),
+    StructField('amt_sales_revenue', FloatType(), True),
+    StructField('amt_cash_and_cash_equivalents', FloatType(), True),
+    StructField('amt_current_assets', FloatType(), True),
+    StructField('amt_non_current_assets', FloatType(), True),
+    StructField('amt_stocks', FloatType(), True),
+    StructField('amt_total_assets', FloatType(), True),
+    StructField('amt_current_liabilities', FloatType(), True),
+    StructField('amt_loans_credits', FloatType(), True),
+    StructField('amt_net_equity', FloatType(), True),
+    StructField('amt_non_current_liabilities', FloatType(), True),
+    StructField('amt_total_liabilities', FloatType(), True),
+])
+varlist_financial_information_analytical = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'processed_at',
+                'amt_cost_goods_and_services', 'amt_earnings_before_income_tax_and_social_contribution',
+                'amt_earnings_before_interest_and_taxes', 'amt_financial_results', 'amt_groos_revenue',
+                'amt_net_profit', 'amt_operating_revenues_and_expenses', 'amt_sales_revenue',
+                'amt_cash_and_cash_equivalents', 'amt_current_assets', 'amt_non_current_assets', 'amt_stocks',
+                'amt_total_assets', 'amt_current_liabilities', 'amt_loans_credits',
+                'amt_net_equity', 'amt_non_current_liabilities', 'amt_total_liabilities']
