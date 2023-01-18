@@ -38,7 +38,7 @@ with DAG(
         python_callable=load_bucket,
         op_kwargs={
             'bucket':f'{FUNDAMENTUS_ANALYTICAL}',
-            'dataType':'pre-processed-stock',
+            'dataType':'analytical-financial-information-dfp',
             'execution_date':EXECUTION_DATE,
             'delete':True,
         }
@@ -58,7 +58,7 @@ with DAG(
         python_callable=load_bucket,
         op_kwargs={
             'bucket':f'{FUNDAMENTUS_ANALYTICAL}',
-            'dataType':'pre-processed-stock',
+            'dataType':'analytical-financial-information-itr',
             'execution_date':EXECUTION_DATE,
             'delete':True,
         }

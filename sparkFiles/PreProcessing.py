@@ -135,6 +135,8 @@ class PreProcessing():
         variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
+        # Standardizing id_cnpj
+        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
 
         return dataset
 
@@ -167,6 +169,8 @@ class PreProcessing():
         variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
+        # Standardizing id_cnpj
+        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
 
         return dataset
         
@@ -199,6 +203,8 @@ class PreProcessing():
         variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
+        # Standardizing id_cnpj
+        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
 
         return dataset
 
@@ -234,6 +240,8 @@ class PreProcessing():
         variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
+        # Standardizing id_cnpj
+        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
 
         return dataset
 
@@ -266,6 +274,8 @@ class PreProcessing():
         variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
+        # Standardizing id_cnpj
+        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
 
         return dataset
 
@@ -298,6 +308,8 @@ class PreProcessing():
         variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
+        # Standardizing id_cnpj
+        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
 
         return dataset
 

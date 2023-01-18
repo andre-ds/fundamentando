@@ -94,7 +94,8 @@ def get_stock_information(ticker_list, start, end=None):
         extract_at = start.replace('-', '_')
         dataset.write.format('parquet') \
             .mode('overwrite') \
-        .save(os.path.join(DIR_PATH_RAW_STOCK, f'extracted_{extract_at}_stock.parquet'))                                                                         
+        .save(os.path.join(DIR_PATH_RAW_STOCK, f'extracted_{extract_at}_stock.parquet'))
+        dataset.filter(col('ticker')=='BBAS3.SA').show()                                                                         
     except:
             print('No data found, symbol may be delisted')
 
@@ -109,5 +110,6 @@ if __name__ == "__main__":
     parser.add_argument("--ticker_list_type", required=True)
     parser.add_argument("--start", required=True)
     args = parser.parse_args()
- 
+    
+    print(f'Data de start: {args.start}')
     get_stock_information(ticker_list=args.ticker_list_type ,start=args.start)

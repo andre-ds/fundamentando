@@ -223,6 +223,16 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_STOCK', task_ids='path_environment')
         dataType = f'pp_stock_union.parquet'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+    
+    elif dataType == 'analytical-financial-information-dfp':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_ANALYTICAL', task_ids='path_environment')
+        dataType = f'analytical_FPD_financial_information.parquet'
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+
+    elif dataType == 'analytical-financial-information-itr':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_ANALYTICAL', task_ids='path_environment')
+        dataType = f'analytical_ITR_financial_information.parquet'
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
 
 def download_s3(ti, bucket_name, key, dataType):
