@@ -58,6 +58,26 @@ class PreProcessing():
         return files_list
 
 
+    def get_start(self, execution_date):
+
+        from datetime import datetime, timedelta
+        start = datetime.strptime(execution_date, "%Y-%m-%d").date()
+        start = start + timedelta(-1)
+        start = start.strftime('%Y-%m-%d')
+
+        return start
+
+
+    def get_end(self, execution_date):
+
+        from datetime import datetime, timedelta
+        start = datetime.strptime(execution_date, "%Y-%m-%d").date()
+        end = start + timedelta(1)
+        end = end.strftime('%Y-%m-%d')
+            
+        return end
+
+
     def _union_quarters(self, dataset_itr:DataFrame, dataset_dfp:DataFrame) -> DataFrame:
 
         # Agregations Q1, Q2 and Q3

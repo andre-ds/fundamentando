@@ -1,5 +1,6 @@
 
 
+
 def download_bucket_s3(s3, bucket, path):
     
     import os
@@ -133,6 +134,17 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
     from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 
+    def __lag_execution_date(execution_date):
+
+        from datetime import datetime, timedelta
+        date_reference = datetime.strptime(execution_date, "%Y-%m-%d").date()
+        date_reference = date_reference + timedelta(-1)
+        date_reference = date_reference.strftime('%Y-%m-%d')
+        date_reference = date_reference.replace('-', '_')
+
+        return date_reference
+
+
     def __load_raw_registration(DIR_PATH, dataType):
 
         hook.load_file(filename=os.path.join(DIR_PATH, dataType), bucket_name=bucket, key=dataType, replace=True)
@@ -205,8 +217,9 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
         __load_raw_dfp_itr(DIR_PATH=DIR_PATH, dataType=dataType)
 
     elif dataType == 'raw-stock':
+        date_reference = __lag_execution_date(execution_date=execution_date)    
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_RAW_STOCK', task_ids='path_environment')
-        dataType = f'extracted_{extract_at}_stock.parquet'
+        dataType = f'extracted_{date_reference}_stock.parquet'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
     elif dataType == 'pre-processed-dfp':

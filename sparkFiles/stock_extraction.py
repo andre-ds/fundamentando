@@ -1,10 +1,9 @@
 import argparse
 
 
-def get_stock_information(ticker_list, start, end=None):
+def get_stock_information(ticker_list, reference_date):
     
     import os
-    from datetime import datetime, timedelta
     import investpy
     import yfinance as yf
     import pandas as pd
@@ -14,20 +13,16 @@ def get_stock_information(ticker_list, start, end=None):
     from pyspark.sql.functions import to_date, col
     from pyspark.sql.types import IntegerType, FloatType
     from sparkDocuments import PATH_DATALAKE, DIR_PATH_RAW_STOCK
-    
-    def _get_end(start):
-
-        start = datetime.strptime(start, '%Y-%m-%d').date()
-        end = start + timedelta(1)
-        end = end.strftime('%Y-%m-%d')
-        
-        return end
+    from PreProcessing import PreProcessing
 
     sk = SparkSession(SparkContext(conf=SparkConf())\
     .getOrCreate())
-    
-    if end is None:
-        end = _get_end(start=start)
+
+    pp = PreProcessing(spark_environment=sk)
+
+    print(f'execution_date: {reference_date}')
+    start = pp.get_start(execution_date=reference_date)
+    end = pp.get_end(execution_date=reference_date)
 
     # Stocks investpy
     if ticker_list=='API':
@@ -91,11 +86,12 @@ def get_stock_information(ticker_list, start, end=None):
             .withColumn('stock_splits', col('stock_splits').cast(IntegerType()))
             )
         # Saving
-        extract_at = start.replace('-', '_')
-        dataset.write.format('parquet') \
-            .mode('overwrite') \
-        .save(os.path.join(DIR_PATH_RAW_STOCK, f'extracted_{extract_at}_stock.parquet'))
-        dataset.filter(col('ticker')=='BBAS3.SA').show()                                                                         
+        reference_date = start.replace('-', '_')
+        if dataset.isEmpty() == False:
+            dataset.write.format('parquet') \
+                .mode('overwrite') \
+            .save(os.path.join(DIR_PATH_RAW_STOCK, f'extracted_{reference_date}_stock.parquet'))
+                                                               
     except:
             print('No data found, symbol may be delisted')
 
@@ -108,8 +104,8 @@ if __name__ == "__main__":
         description="Spark Pre-processing"
     )
     parser.add_argument("--ticker_list_type", required=True)
-    parser.add_argument("--start", required=True)
+    parser.add_argument("--reference_date", required=True)
     args = parser.parse_args()
     
-    print(f'Data de start: {args.start}')
-    get_stock_information(ticker_list=args.ticker_list_type ,start=args.start)
+    print(f'Data de start: {args.reference_date}')
+    get_stock_information(ticker_list=args.ticker_list_type ,reference_date=args.reference_date)
