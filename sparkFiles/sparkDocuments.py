@@ -3,9 +3,11 @@ from pyspark.sql.types import StructField, StructType, DateType, DoubleType, Str
 
 
 PATH_DATALAKE = '/datalake'
+DIR_PATH_RAW_FCA= os.path.join(PATH_DATALAKE, 'raw-fca')
 DIR_PATH_RAW_DFP = os.path.join(PATH_DATALAKE, 'raw-dfp')
 DIR_PATH_RAW_ITR = os.path.join(PATH_DATALAKE, 'raw-itr')
 DIR_PATH_RAW_STOCK = os.path.join(PATH_DATALAKE, 'raw-stock')
+DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER = os.path.join(PATH_DATALAKE, 'pre-processed-fca-general-register')
 DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
 DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
 DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
@@ -137,6 +139,23 @@ schema_pp_dre = StructType([
     StructField('processed_at', DateType(), True),
 ])
 
+schema_fca_register = StructType([
+    StructField('id_cnpj', StringType(), True),
+    StructField('dt_refer', DateType(), True),
+    StructField('txt_company_name', StringType(), True),
+    StructField('dt_company_creation', DateType(), True),
+    StructField('dt_cvm_register', DateType(), True),
+    StructField('cat_cvm_register_situation', StringType(), True),
+    StructField('dt_cvm_register_situation', DateType(), True),
+    StructField('cat_sector', StringType(), True),
+    StructField('text_sector', StringType(), True),
+    StructField('cat_situation_issuer', StringType(), True),
+    StructField('dt_situation_issuer', DateType(), True),
+    StructField('dt_year_fiscal_end', IntegerType(), True),
+    StructField('dt_month_fiscal_end', IntegerType(), True),
+    StructField('cat_country_origin', StringType(), True),
+    StructField('processed_at', DateType(), True)
+])
 
 schema_pp_bpa_bpp = StructType([
     StructField('id_cvm', StringType(), True),

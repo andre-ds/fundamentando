@@ -5,7 +5,10 @@ from airflow.operators.bash_operator import BashOperator
 
 
 def __taskgroup_ids(dataType):
-    if dataType == 'dfp_dre':
+    if dataType == 'fca_cia_aberta_geral':
+        group_id = 'pre_processing_cvm_aberta_geral'
+        tooltip  = 'pre processing cvm aberta geral'
+    elif dataType == 'dfp_dre':
         group_id = 'pre_processing_cvm_dfp_dre'
         tooltip  = 'pre processing cvm dfp dre'
     elif dataType == 'dfp_bpp':

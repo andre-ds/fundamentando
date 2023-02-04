@@ -28,11 +28,6 @@ class PreProcessing():
         return missing_variables
 
 
-    def text_normalization(row):
-
-        return row.encode('ascii', 'ignore').decode('ascii')
-
-
     def patterning_text_var(self, dataset:DataFrame, variable:str) -> DataFrame:
 
         dataset[variable] = dataset[variable].str.lower().str.strip().str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
@@ -123,6 +118,56 @@ class PreProcessing():
 
         return dataset
 
+    
+    def _pre_processing_fca_aberta_geral(self, dataset):
+
+        import pyspark.sql.functions as f
+
+        def remove_accents(inputStr):
+            import unicodedata
+
+            nfkdStr = unicodedata.normalize('NFKD', inputStr)
+            withOutAccents = u"".join([c for c in nfkdStr if not unicodedata.combining(c)])
+            
+            return withOutAccents
+            
+        for var in dataset.columns:
+            print(var)
+            dataset = dataset.withColumnRenamed(var, var.lower())
+
+        variablesRename = [['cnpj_companhia', 'id_cnpj'], ['data_referencia', 'dt_refer'], ['nome_empresarial','txt_company_name'],
+                        ['data_constituicao', 'dt_company_creation'], ['data_registro_cvm', 'dt_cvm_register'], ['situacao_registro_cvm', 'cat_cvm_register_situation'],
+                        ['data_situacao_registro_cvm', 'dt_cvm_register_situation'], ['setor_atividade', 'cat_sector'], ['descricao_atividade', 'text_sector'],
+                        ['situacao_emissor', 'cat_situation_issuer'], ['data_situacao_emissor', 'dt_situation_issuer'], ['dia_encerramento_exercicio_social', 'dt_year_fiscal_end'],
+                        ['mes_encerramento_exercicio_social', 'dt_month_fiscal_end'], ['pais_origem', 'cat_country_origin']]
+
+        select_variables = []
+        for v in variablesRename:
+            select_variables.append(v[1])
+            dataset = dataset.withColumnRenamed(v[0], v[1])
+        
+        udf1 = f.udf(lambda x:remove_accents(x), StringType()) 
+        dataset = (
+            dataset
+            .select(select_variables)
+            .withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+            .withColumn('dt_month_fiscal_end', f.col('dt_month_fiscal_end').cast('integer'))
+            .withColumn('dt_year_fiscal_end', f.col('dt_year_fiscal_end').cast('integer'))
+            .fillna(subset=['cat_sector'], value='')
+            .withColumn('cat_sector', udf1(f.col('cat_sector')))
+            .fillna(subset=['text_sector','txt_company_name'], value='')
+            .withColumn('text_sector', udf1(f.col('text_sector')))
+            .withColumn('txt_company_name', udf1(f.col('txt_company_name')))
+        )
+  
+        for v in ['txt_company_name', 'cat_cvm_register_situation', 'cat_sector', 'text_sector', 'cat_situation_issuer', 'cat_country_origin']:
+            dataset = dataset.withColumn(v, f.lower(f.col(v)))
+
+        for v in ['dt_refer', 'dt_company_creation', 'dt_cvm_register', 'dt_cvm_register_situation', 'dt_situation_issuer']:
+            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
+
+        return dataset
+   
 
     def _pre_processing_itr_dre(self, dataset:DataFrame) -> DataFrame:
     
@@ -152,7 +197,7 @@ class PreProcessing():
         varlist = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year', 'dt_quarter']
         dataset = dataset.groupBy(varlist).pivot('cd_conta').max('vl_conta').na.fill(0)
         # Rename all variables to upercase
-        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
+        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
         # Standardizing id_cnpj
@@ -337,7 +382,7 @@ class PreProcessing():
     def pre_process_cvm(self, dataType:str, schema:StructField, year:str, execution_date:DateType):
 
 
-        from sparkDocuments import types_dict, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR
+        from sparkDocuments import types_dict, DIR_PATH_RAW_FCA, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR
 
 
         def _saving_pre_processing(dataset, path, dataType, file):
@@ -356,17 +401,22 @@ class PreProcessing():
        
             return dataset
 
-
-        if dataType == 'itr_dre' or dataType == 'itr_bpp' or dataType == 'itr_bpa':
+        if dataType == 'fca_cia_aberta_geral':
+            list_files = [file for file in os.listdir(DIR_PATH_RAW_FCA) if (file.endswith('.csv')) and re.findall('fca_cia_aberta_geral', file)]
+        elif dataType == 'itr_dre' or dataType == 'itr_bpp' or dataType == 'itr_bpa':
             list_files = [file for file in os.listdir(DIR_PATH_RAW_ITR) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
         elif dataType == 'dfp_dre' or dataType == 'dfp_bpp' or dataType == 'dfp_bpa':
             list_files = [file for file in os.listdir(DIR_PATH_RAW_DFP) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
 
-
         for file in list_files:
             if year == file[-8:-4]:
                 # Oppen Datasets
-                if dataType == 'itr_dre':
+                if dataType == 'fca_cia_aberta_geral':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_FCA, file), header = True, sep=';', encoding='ISO-8859-1')
+                    dataset = self._pre_processing_fca_aberta_geral(dataset = dataset)
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER)
+                elif dataType == 'itr_dre':
                     dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_itr_dre(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)

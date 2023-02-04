@@ -14,15 +14,21 @@ years_list = dc.years_list
 
 def _extraction_cvm(ti, dataType:str, year:int, execution_date:str):
     
-    from utils.documents import repository_DFP, repository_ITR
+    from utils.documents import repository_DFP, repository_ITR, repository_FCA
 
     # Local Path
     #DIR_PATH_RAW = ti.xcom_pull(key='DIR_PATH_RAW', task_ids='path_environment')
     DIR_PATH_RAW_DFP = ti.xcom_pull(key='DIR_PATH_RAW_DFP', task_ids='path_environment')
     DIR_PATH_RAW_ITR = ti.xcom_pull(key='DIR_PATH_RAW_ITR', task_ids='path_environment')
+    DIR_PATH_RAW_FCA = ti.xcom_pull(key='DIR_PATH_RAW_FCA', task_ids='path_environment')
     extract_at = execution_date.replace('-', '_')
     
 
+    if 'fca' in dataType:
+        try:
+            urllib.request.urlretrieve(repository_FCA+f'fca_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW_FCA, f'extracted_{extract_at}_fca_cia_aberta_{year}.zip'))
+        except:
+            print(f'The file fca_cia_aberta_{year}.zip is not avaliable.')
     if 'dfp' in dataType:
         try:
             urllib.request.urlretrieve(repository_DFP+f'dfp_cia_aberta_{year}.zip', os.path.join(DIR_PATH_RAW_DFP, f'extracted_{extract_at}_dfp_cia_aberta_{year}.zip'))
