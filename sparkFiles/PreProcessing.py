@@ -118,7 +118,68 @@ class PreProcessing():
 
         return dataset
 
-    
+    def _pre_processing_fca_valor_mobiliario(self, dataset):
+
+        import pyspark.sql.functions as f
+
+        for var in dataset.columns:
+            dataset = dataset.withColumnRenamed(var, var.lower())
+
+        variablesRename = [
+            ['cnpj_companhia', 'id_cnpj'],
+            ['id_documento', 'id_document'],
+            ['versao', 'qty_version'],
+            ['data_referencia', 'dt_refer'],
+            ['valor_mobiliario', 'cat_stock_type'],
+            ['sigla_classe_acao_preferencial', 'cat_preferencial_stock'],
+            ['codigo_negociacao', 'id_ticker'],
+            ['mercado', 'cat_type_market'],
+            ['sigla_entidade_administradora', 'cat_market'],
+            ['entidade_administradora', 'text_market'],
+            ['segmento', 'cat_governance_segmentation'],
+            ['data_inicio_negociacao', 'dt_start_negociation'],
+            ['data_fim_negociacao', 'dt_end_negociation'],
+            ['data_inicio_listagem', 'dt_start_listing'],
+            ['data_fim_listagem', 'dt_end_listing']
+        ]
+
+        select_variables = []
+        for v in variablesRename:
+            select_variables.append(v[1])
+            print(v[0])
+            dataset = dataset.withColumnRenamed(v[0], v[1])
+
+        def remove_accents(inputStr):
+            import unicodedata
+
+            nfkdStr = unicodedata.normalize('NFKD', inputStr)
+            withOutAccents = u"".join([c for c in nfkdStr if not unicodedata.combining(c)])
+            
+            return withOutAccents
+
+        udf1 = f.udf(lambda x:remove_accents(x),StringType()) 
+
+        dataset = (
+            dataset
+            .select(select_variables)
+            .withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+            .fillna(subset=['text_market', 'cat_governance_segmentation', 'cat_stock_type', 'cat_type_market'], value='')
+            .withColumn('text_market', udf1(f.col('text_market')))
+            .withColumn('cat_governance_segmentation', udf1(f.col('cat_governance_segmentation')))
+            .withColumn('cat_stock_type', udf1(f.col('cat_stock_type')))
+            .withColumn('cat_type_market', udf1(f.col('cat_type_market')))
+            .withColumn('qty_version', f.col('qty_version').cast('integer'))
+        )
+
+        for v in ['cat_stock_type', 'text_market', 'cat_governance_segmentation', 'cat_type_market']:
+            dataset = dataset.withColumn(v, f.lower(f.col(v)))
+
+        for v in ['dt_refer', 'dt_start_negociation', 'dt_end_negociation', 'dt_start_listing', 'dt_end_listing']:
+            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
+
+        return dataset
+
+
     def _pre_processing_fca_aberta_geral(self, dataset):
 
         import pyspark.sql.functions as f
@@ -135,11 +196,22 @@ class PreProcessing():
             print(var)
             dataset = dataset.withColumnRenamed(var, var.lower())
 
-        variablesRename = [['cnpj_companhia', 'id_cnpj'], ['data_referencia', 'dt_refer'], ['nome_empresarial','txt_company_name'],
-                        ['data_constituicao', 'dt_company_creation'], ['data_registro_cvm', 'dt_cvm_register'], ['situacao_registro_cvm', 'cat_cvm_register_situation'],
-                        ['data_situacao_registro_cvm', 'dt_cvm_register_situation'], ['setor_atividade', 'cat_sector'], ['descricao_atividade', 'text_sector'],
-                        ['situacao_emissor', 'cat_situation_issuer'], ['data_situacao_emissor', 'dt_situation_issuer'], ['dia_encerramento_exercicio_social', 'dt_year_fiscal_end'],
-                        ['mes_encerramento_exercicio_social', 'dt_month_fiscal_end'], ['pais_origem', 'cat_country_origin']]
+        variablesRename = [['cnpj_companhia', 'id_cnpj'],
+                        ['data_referencia', 'dt_refer'],
+                        ['id_documento', 'id_document'],
+                        ['versao', 'qty_version'],
+                        ['nome_empresarial','txt_company_name'],
+                        ['data_constituicao', 'dt_company_creation'],
+                        ['data_registro_cvm', 'dt_cvm_register'],
+                        ['situacao_registro_cvm', 'cat_cvm_register_situation'],
+                        ['data_situacao_registro_cvm', 'dt_cvm_register_situation'],
+                        ['setor_atividade', 'cat_sector'],
+                        ['descricao_atividade', 'text_sector'],
+                        ['situacao_emissor', 'cat_situation_issuer'],
+                        ['data_situacao_emissor', 'dt_situation_issuer'],
+                        ['dia_encerramento_exercicio_social', 'dt_year_fiscal_end'],
+                        ['mes_encerramento_exercicio_social', 'dt_month_fiscal_end'],
+                        ['pais_origem', 'cat_country_origin']]
 
         select_variables = []
         for v in variablesRename:
@@ -153,9 +225,8 @@ class PreProcessing():
             .withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
             .withColumn('dt_month_fiscal_end', f.col('dt_month_fiscal_end').cast('integer'))
             .withColumn('dt_year_fiscal_end', f.col('dt_year_fiscal_end').cast('integer'))
-            .fillna(subset=['cat_sector'], value='')
-            .withColumn('cat_sector', udf1(f.col('cat_sector')))
-            .fillna(subset=['text_sector','txt_company_name'], value='')
+            .fillna(subset=['cat_sector', 'text_sector','txt_company_name'], value='')
+            .withColumn('cat_sector', udf1(f.col('cat_sector')))         
             .withColumn('text_sector', udf1(f.col('text_sector')))
             .withColumn('txt_company_name', udf1(f.col('txt_company_name')))
         )
@@ -382,7 +453,7 @@ class PreProcessing():
     def pre_process_cvm(self, dataType:str, schema:StructField, year:str, execution_date:DateType):
 
 
-        from sparkDocuments import types_dict, DIR_PATH_RAW_FCA, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR
+        from sparkDocuments import types_dict, DIR_PATH_RAW_FCA, DIR_PATH_RAW_DFP, DIR_PATH_RAW_ITR, DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER, DIR_PATH_PROCESSED_FCA_STOCK_TYPE, DIR_PATH_PROCESSED_DFP, DIR_PATH_PROCESSED_ITR
 
 
         def _saving_pre_processing(dataset, path, dataType, file):
@@ -401,8 +472,10 @@ class PreProcessing():
        
             return dataset
 
-        if dataType == 'fca_cia_aberta_geral':
+        if dataType == 'fca_aberta_geral':
             list_files = [file for file in os.listdir(DIR_PATH_RAW_FCA) if (file.endswith('.csv')) and re.findall('fca_cia_aberta_geral', file)]
+        if dataType == 'fca_valor_mobiliario':
+            list_files = [file for file in os.listdir(DIR_PATH_RAW_FCA) if (file.endswith('.csv')) and re.findall('fca_cia_aberta_valor_mobiliario', file)]
         elif dataType == 'itr_dre' or dataType == 'itr_bpp' or dataType == 'itr_bpa':
             list_files = [file for file in os.listdir(DIR_PATH_RAW_ITR) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
         elif dataType == 'dfp_dre' or dataType == 'dfp_bpp' or dataType == 'dfp_bpa':
@@ -411,11 +484,16 @@ class PreProcessing():
         for file in list_files:
             if year == file[-8:-4]:
                 # Oppen Datasets
-                if dataType == 'fca_cia_aberta_geral':
+                if dataType == 'fca_aberta_geral':
                     dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_FCA, file), header = True, sep=';', encoding='ISO-8859-1')
                     dataset = self._pre_processing_fca_aberta_geral(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER)
+                elif dataType == 'fca_valor_mobiliario':
+                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_FCA, file), header = True, sep=';', encoding='ISO-8859-1')
+                    dataset = self._pre_processing_fca_valor_mobiliario(dataset = dataset)
+                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_FCA_STOCK_TYPE)                
                 elif dataType == 'itr_dre':
                     dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_itr_dre(dataset = dataset)

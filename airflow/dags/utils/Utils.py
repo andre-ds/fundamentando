@@ -61,6 +61,8 @@ def path_environment(ti):
         os.mkdir(os.path.join(PATH_DATALAKE, 'raw-dfp'))
     if 'pre-processed-fca-general-register' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed-fca-general-register'))
+    if 'pre-processed-fca-stock-type' not in list_folders:
+        os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed-fca-stock-type'))
     if 'pre-processed-dfp' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed-dfp'))
     if 'pre-processed-itr' not in list_folders:
@@ -76,6 +78,7 @@ def path_environment(ti):
     DIR_PATH_RAW_DFP = os.path.join(PATH_DATALAKE, 'raw-dfp')
 
     DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER = os.path.join(PATH_DATALAKE, 'pre-processed-fca-general-register')
+    DIR_PATH_PROCESSED_FCA_STOCK_TYPE = os.path.join(PATH_DATALAKE, 'pre-processed-fca-stock-type')
     DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
     DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
     DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
@@ -90,6 +93,7 @@ def path_environment(ti):
     ti.xcom_push(key='DIR_PATH_RAW_DFP', value=DIR_PATH_RAW_DFP)
     # Pre-processed folders
     ti.xcom_push(key='DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER', value=DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER)
+    ti.xcom_push(key='DIR_PATH_PROCESSED_FCA_STOCK_TYPE', value=DIR_PATH_PROCESSED_FCA_STOCK_TYPE)
     ti.xcom_push(key='DIR_PATH_PROCESSED_DFP', value=DIR_PATH_PROCESSED_DFP)
     ti.xcom_push(key='DIR_PATH_PROCESSED_ITR', value=DIR_PATH_PROCESSED_ITR)
     ti.xcom_push(key='DIR_PATH_PROCESSED_STOCK', value=DIR_PATH_PROCESSED_STOCK)
@@ -224,8 +228,14 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
 
     elif dataType == 'pre-processed-fca-general-register':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER', task_ids='path_environment')
-        dataType = 'fca_cia_aberta_geral'
+        dataType = 'fca_aberta_geral'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+
+    elif dataType == 'pre-processed-fca-stock-type':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_FCA_STOCK_TYPE', task_ids='path_environment')
+        dataType = 'fca_valor_mobiliario'
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+
 
     elif dataType == 'pre-processed-dfp':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_DFP', task_ids='path_environment')

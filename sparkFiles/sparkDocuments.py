@@ -8,6 +8,7 @@ DIR_PATH_RAW_DFP = os.path.join(PATH_DATALAKE, 'raw-dfp')
 DIR_PATH_RAW_ITR = os.path.join(PATH_DATALAKE, 'raw-itr')
 DIR_PATH_RAW_STOCK = os.path.join(PATH_DATALAKE, 'raw-stock')
 DIR_PATH_PROCESSED_FCA_GENERAL_REGISTER = os.path.join(PATH_DATALAKE, 'pre-processed-fca-general-register')
+DIR_PATH_PROCESSED_FCA_STOCK_TYPE = os.path.join(PATH_DATALAKE, 'pre-processed-fca-stock-type')
 DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
 DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
 DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
@@ -157,9 +158,30 @@ schema_fca_register = StructType([
     StructField('processed_at', DateType(), True)
 ])
 
+schema_fca_stock_type = StructType([
+    StructField('id_cnpj', StringType(), True),
+    StructField('dt_refer', DateType(), True),
+    StructField('id_document', StringType(), True),
+    StructField('qty_version', IntegerType(), True),
+    StructField('cat_stock_type', StringType(), True),
+    StructField('cat_preferencial_stock', DateType(), True),
+    StructField('id_ticker:', StringType(), True),
+    StructField('cat_type_market', StringType(), True),
+    StructField('cat_market', StringType(), True),
+    StructField('text_market', StringType(), True),
+    StructField('cat_governance_segmentation', DateType(), True),
+    StructField('dt_start_negociation', DateType(), True),
+    StructField('dt_end_negociation', DateType(), True),
+    StructField('dt_start_listing', DateType(), True),
+    StructField('dt_end_listing', DateType(), True),
+    StructField('processed_at', DateType(), True)
+])
+
 schema_pp_bpa_bpp = StructType([
     StructField('id_cvm', StringType(), True),
     StructField('id_cnpj', StringType(), True),
+    StructField('id_document', StringType(), True),
+     StructField('qty_version', IntegerType(), True),
     StructField('txt_company_name', StringType(), True),
     StructField('dt_year', IntegerType(), True),
     StructField('dt_quarter', IntegerType(), True),

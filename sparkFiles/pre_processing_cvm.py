@@ -4,7 +4,7 @@ from pyspark.context import SparkContext
 from pyspark.conf import SparkConf
 from pyspark.sql import SparkSession
 from PreProcessing import PreProcessing
-from sparkDocuments import schema_fca_register, schema_dre, schema_bp_ba
+from sparkDocuments import schema_fca_register, schema_fca_stock_type, schema_dre, schema_bp_ba
 
 
 if __name__ == "__main__":
@@ -24,8 +24,10 @@ if __name__ == "__main__":
     pp = PreProcessing(spark_environment=sk)
     extract_at = args.execution_date
 
-    if args.dataType == 'fca_cia_aberta_geral':
+    if args.dataType == 'fca_aberta_geral':
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_fca_register, execution_date=extract_at)
+    elif args.dataType == 'fca_valor_mobiliario':
+        pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_fca_stock_type, execution_date=extract_at)
     elif args.dataType == 'dfp_dre':
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre, execution_date=extract_at)
     elif args.dataType == 'dfp_bpp':
