@@ -180,6 +180,29 @@ class PreProcessing():
         return dataset
 
 
+    def pre_processing_ticker_list(self, dataset_1, dataset_2):
+
+        import pyspark.sql.functions as f
+
+        dataset = (
+            dataset_1
+            .union(dataset_2)
+            .withColumn('size', f.length(f.col('id_ticker')))
+            .filter(f.col('size')>=5)
+            .filter((f.col('cat_type_market')=='bolsa')
+                &((f.col('cat_stock_type')=='acoes ordinarias')
+                |(f.col('cat_stock_type')=='acoes preferenciais')
+                |(f.col('cat_stock_type')=='units')))
+            .filter(dataset_1['dt_end_listing'].isNull())
+            .withColumn('id_ticker', f.upper(f.col('id_ticker')))
+            .select('id_cnpj', 'id_ticker')
+            .withColumn('ticker_list', f.concat(f.col('id_ticker'), f.lit('.SA')))
+            .dropDuplicates()
+        )
+
+        return dataset
+
+
     def _pre_processing_fca_aberta_geral(self, dataset):
 
         import pyspark.sql.functions as f

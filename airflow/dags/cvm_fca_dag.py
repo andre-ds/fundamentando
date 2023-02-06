@@ -5,13 +5,14 @@ from groups.group_extractions_cvm import extraction_cvm
 from groups.group_pre_processing_cvm import pre_processing_cvm
 from utils.Utils import path_environment, load_bucket, unzippded_files
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash_operator import BashOperator
+from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 
 
 EXECUTION_DATE = '{{ ds }}'
 FUNDAMENTUS_RAW_FCA = Variable.get('FUNDAMENTUS_RAW_FCA')
 FUNDAMENTUS_PRE_PROCESSED_FCA_GENERAL_REGISTER = Variable.get('FUNDAMENTUS_PRE_PROCESSED_FCA_GENERAL_REGISTER')
 FUNDAMENTUS_PRE_PROCESSED_FCA_STOCK_TYPE = Variable.get('FUNDAMENTUS_PRE_PROCESSED_FCA_STOCK_TYPE')
+
 
 with DAG(
     dag_id='cvm_fca',
@@ -71,4 +72,15 @@ with DAG(
         }
     )
 
-environment >> ext_cvm_fca >> upload_s3_r >> unzip_cvm >> pp_cvm_fca_aberta_geral >> upload_s3_pp_register_id >> pp_cvm_fca_valor_mobiliario >> upload_s3_pp_stock_type_id
+    stock_ticker_list_id = SparkSubmitOperator(
+        task_id=f'stock_ticker_list',
+        conn_id='spark',
+        application='/opt/sparkFiles/stock_ticker_list.py',
+        name='stock_ticker_list_',
+        application_args=[
+        '--execution_date', EXECUTION_DATE,]
+    )
+
+
+
+environment >> ext_cvm_fca >> upload_s3_r >> unzip_cvm >> pp_cvm_fca_aberta_geral >> upload_s3_pp_register_id >> pp_cvm_fca_valor_mobiliario >> upload_s3_pp_stock_type_id >> stock_ticker_list_id
