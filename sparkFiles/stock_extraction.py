@@ -12,7 +12,7 @@ def get_stock_information(ticker_list, reference_date):
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import to_date, col
     from pyspark.sql.types import IntegerType, FloatType
-    from sparkDocuments import PATH_DATALAKE, DIR_PATH_RAW_STOCK
+    from sparkDocuments import DIR_PATH_RAW_STOCK, DIR_PATH_PROCESSED_FCA_STOCK_TYPE
     from PreProcessing import PreProcessing
 
     sk = SparkSession(SparkContext(conf=SparkConf())\
@@ -39,14 +39,14 @@ def get_stock_information(ticker_list, reference_date):
                 'ticker':'object',
                 'id_cnpj':'object'
             }
-        dataset_stocks = pd.read_csv(os.path.join(PATH_DATALAKE, 'register_2022-12-13.csv'), dtype=dtype)
-        ticker_list = dataset_stocks['ticker'].to_list()
+        dataset_stocks = pd.read_csv(os.path.join(DIR_PATH_PROCESSED_FCA_STOCK_TYPE, 'register_2023_01_27_stock_tickers.csv'), dtype=dtype)
+        ticker_list = dataset_stocks['ticker_list'].to_list()
     try:
         dataset = yf.download(ticker_list, start=start, end=end,  actions=True)
         dataset = dataset.stack().reset_index()
         dataset.rename(columns={
             'Date':'date',
-            'level_1':'ticker',
+            'level_1':'ticker_list',
             'Adj Close':'adj_close',
             'Close':'close',
             'Dividends':'dividends',
@@ -57,9 +57,9 @@ def get_stock_information(ticker_list, reference_date):
             'Volume':'volume'   
         }, inplace=True)
         dataset['date']=dataset['date'].astype(str)
-        dataset = pd.merge(dataset, dataset_stocks, on='ticker', how='left')
+        dataset = pd.merge(dataset, dataset_stocks, on='ticker_list', how='left')
         print(dataset.columns)
-        variables = ['date', 'id_isin', 'id_cnpj', 'ticker', 'adj_close',
+        variables = ['date', 'id_cnpj', 'id_ticker', 'adj_close',
                     'close', 'dividends', 'high', 'low',
                     'open', 'stock_splits', 'volume']
         dataset = dataset[variables]
@@ -72,19 +72,23 @@ def get_stock_information(ticker_list, reference_date):
         print(type(dataset))
         print(dataset.show())
         print('createDataFrame-dps')
+        variables = ['dt_date', 'id_ticker','amt_adj_close', 'amt_close', 'amt_high', 
+                    'amt_low', 'amt_open', 'qty_volume', 'amt_dividends', 'cat_stock_splits']
         dataset = (
             dataset
             .filter(col('date') == start)
-            .withColumn('date', to_date(col('date'), 'yyyy-MM-dd'))
-            .withColumn('adj_close', col('adj_close').cast(FloatType()))
-            .withColumn('close', col('close').cast(FloatType()))
-            .withColumn('high', col('high').cast(FloatType()))
-            .withColumn('low', col('low').cast(FloatType()))
-            .withColumn('open', col('open').cast(FloatType()))
-            .withColumn('volume', col('volume').cast(FloatType()))
-            .withColumn('dividends', col('dividends').cast(IntegerType()))
-            .withColumn('stock_splits', col('stock_splits').cast(IntegerType()))
+            .withColumn('dt_date', to_date(col('date'), 'yyyy-MM-dd'))
+            .withColumn('amt_adj_close', col('adj_close').cast(FloatType()))
+            .withColumn('amt_close', col('close').cast(FloatType()))
+            .withColumn('amt_high', col('high').cast(FloatType()))
+            .withColumn('amt_low', col('low').cast(FloatType()))
+            .withColumn('amt_open', col('open').cast(FloatType()))
+            .withColumn('qty_volume', col('volume').cast(FloatType()))
+            .withColumn('amt_dividends', col('dividends').cast(IntegerType()))
+            .withColumn('cat_stock_splits', col('stock_splits').cast(IntegerType()))
+            .select(variables)
             )
+        print(dataset.show())
         # Saving
         reference_date = start.replace('-', '_')
         if dataset.isEmpty() == False:
@@ -94,8 +98,6 @@ def get_stock_information(ticker_list, reference_date):
                                                                
     except:
             print('No data found, symbol may be delisted')
-
-
 
 
 if __name__ == "__main__":

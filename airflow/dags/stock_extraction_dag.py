@@ -20,7 +20,7 @@ FUNDAMENTUS_PRE_PROCESSED_STOCK = Variable.get('FUNDAMENTUS_PRE_PROCESSED_STOCK'
 
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2023, 1, 1),
+    start_date=datetime(2023, 1, 20),
     schedule_interval='10 10 * * 2-6',
     catchup=True
 ) as dag:
@@ -39,6 +39,7 @@ with DAG(
         '--ticker_list_type', 'file',
         '--reference_date', EXECUTION_DATE,]
     )
+'''
 
     upload_s3_raw_ticker = PythonOperator(
         task_id='upload_s3_raw_ticker_id',
@@ -70,5 +71,8 @@ with DAG(
             'delete':True,
         }
     )
+'''
 
-environment >> stock_extraction >> upload_s3_raw_ticker >> union_stocks >> upload_s3_union
+environment >> stock_extraction
+
+#  >> upload_s3_raw_ticker >> union_stocks >> upload_s3_union
