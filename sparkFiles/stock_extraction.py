@@ -10,7 +10,7 @@ def get_stock_information(ticker_list, reference_date):
     from pyspark.context import SparkContext
     from pyspark.conf import SparkConf
     from pyspark.sql import SparkSession
-    from pyspark.sql.functions import to_date, col
+    import pyspark.sql.functions as f
     from pyspark.sql.types import IntegerType, FloatType
     from sparkDocuments import DIR_PATH_RAW_STOCK, DIR_PATH_PROCESSED_FCA_STOCK_TYPE
     from PreProcessing import PreProcessing
@@ -72,20 +72,20 @@ def get_stock_information(ticker_list, reference_date):
         print(type(dataset))
         print(dataset.show())
         print('createDataFrame-dps')
-        variables = ['dt_date', 'id_ticker','amt_adj_close', 'amt_close', 'amt_high', 
+        variables = ['dt_date', 'id_cnpj', 'id_ticker','amt_adj_close', 'amt_close', 'amt_high', 
                     'amt_low', 'amt_open', 'qty_volume', 'amt_dividends', 'cat_stock_splits']
         dataset = (
             dataset
-            .filter(col('date') == start)
-            .withColumn('dt_date', to_date(col('date'), 'yyyy-MM-dd'))
-            .withColumn('amt_adj_close', col('adj_close').cast(FloatType()))
-            .withColumn('amt_close', col('close').cast(FloatType()))
-            .withColumn('amt_high', col('high').cast(FloatType()))
-            .withColumn('amt_low', col('low').cast(FloatType()))
-            .withColumn('amt_open', col('open').cast(FloatType()))
-            .withColumn('qty_volume', col('volume').cast(FloatType()))
-            .withColumn('amt_dividends', col('dividends').cast(IntegerType()))
-            .withColumn('cat_stock_splits', col('stock_splits').cast(IntegerType()))
+            .filter(f.col('date') == start)
+            .withColumn('dt_date', f.to_date(f.col('date'), 'yyyy-MM-dd'))
+            .withColumn('amt_adj_close', f.col('adj_close').cast(FloatType()))
+            .withColumn('amt_close', f.col('close').cast(FloatType()))
+            .withColumn('amt_high', f.col('high').cast(FloatType()))
+            .withColumn('amt_low', f.col('low').cast(FloatType()))
+            .withColumn('amt_open', f.col('open').cast(FloatType()))
+            .withColumn('qty_volume', f.col('volume').cast(FloatType()))
+            .withColumn('amt_dividends', f.col('dividends').cast(IntegerType()))
+            .withColumn('cat_stock_splits', f.col('stock_splits').cast(IntegerType()))
             .select(variables)
             )
         print(dataset.show())

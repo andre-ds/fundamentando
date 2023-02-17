@@ -7,7 +7,6 @@ from airflow.operators.python import PythonOperator
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from utils.Utils import load_bucket
 
-
 '''
 The yfinance API always provide the information with one day of delay.
 For example, if the extraction (start date) is of the 17th of january (tuesday),
@@ -20,7 +19,7 @@ FUNDAMENTUS_PRE_PROCESSED_STOCK = Variable.get('FUNDAMENTUS_PRE_PROCESSED_STOCK'
 
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2023, 1, 20),
+    start_date=datetime(2023, 1, 29),
     schedule_interval='10 10 * * 2-6',
     catchup=True
 ) as dag:
@@ -39,7 +38,6 @@ with DAG(
         '--ticker_list_type', 'file',
         '--reference_date', EXECUTION_DATE,]
     )
-'''
 
     upload_s3_raw_ticker = PythonOperator(
         task_id='upload_s3_raw_ticker_id',
@@ -71,8 +69,5 @@ with DAG(
             'delete':True,
         }
     )
-'''
 
-environment >> stock_extraction
-
-#  >> upload_s3_raw_ticker >> union_stocks >> upload_s3_union
+environment >> stock_extraction >> upload_s3_raw_ticker >> union_stocks >> upload_s3_union

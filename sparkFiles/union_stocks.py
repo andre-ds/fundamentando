@@ -20,14 +20,14 @@ def union_stock(reference_date):
     # Pre-processing
     dataset = (
         dataset
-        .orderBy(col('date'))
+        .orderBy(col('dt_date'))
         .dropDuplicates()
-        .select('date', 'id_isin', 'id_cnpj', 'ticker', 'adj_close', 'close', 'dividends', 'high', 'low', 'open', 'stock_splits', 'volume')
+        .select('dt_date', 'id_cnpj', 'id_ticker', 'amt_adj_close', 'amt_close', 'amt_high', 'amt_low', 'amt_open', 'qty_volume', 'amt_dividends', 'cat_stock_splits')
     )
     # Append Dataset
     dataset.write.format('parquet') \
             .mode('append') \
-            .save(os.path.join(DIR_PATH_PROCESSED_STOCK, f'pp_stock_union.parquet'))  
+            .save(os.path.join(DIR_PATH_PROCESSED_STOCK, 'pp_stock_union.parquet'))  
 
 
 if __name__ == "__main__":
