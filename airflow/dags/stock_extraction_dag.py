@@ -19,7 +19,7 @@ FUNDAMENTUS_PRE_PROCESSED_STOCK = Variable.get('FUNDAMENTUS_PRE_PROCESSED_STOCK'
 
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2023, 1, 29),
+    start_date=datetime(2023, 2, 13),
     schedule_interval='10 10 * * 2-6',
     catchup=True
 ) as dag:

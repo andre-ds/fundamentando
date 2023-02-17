@@ -85,6 +85,9 @@ Essas variáveis de ambiente serão utilizadas para as DAGs *analytical_dre_dag.
 
 Definina cada Key e o respectivo campo Val com o nome do bucket onde serão armazenados os dados.
 
+- FUNDAMENTUS_RAW_FCA
+- FUNDAMENTUS_PRE_PROCESSED_FCA_GENERAL_REGISTER
+- FUNDAMENTUS_PRE_PROCESSED_FCA_STOCK_TYPE
 - FUNDAMENTUS_RAW_STOCK
 - FUNDAMENTUS_PRE_PROCESSED_STOCK
 - FUNDAMENTUS_RAW_ITR
