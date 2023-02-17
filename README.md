@@ -111,7 +111,7 @@ Em seguida será apresentando o papel de cada uma das DAGs no pipeline de consum
 
 DAG | Descrição
 ------|------ 
-cvm_registration_dag | Dag responsável por extrair dados cadastrais das empresas de capital aberto negociadas na B3.
+cvm_fca_dag | Dag responsável por extrair dados dos formulários cadastrais das empresas de capital aberto negociadas na B3.
 stock_extraction_dag | Dag de extração de dados cotação de ações.
 analytical_stock_price_dag | Dag de criação de variáveis relacionadadas com os dados de cotação para camada análitica.
 cvm_itr_dag | Dag de extração e pré-processamento dos dados financeiros ITR cuja fonte de dados é a CVM.
@@ -119,11 +119,43 @@ cvm_dfp_dag | Dag de extração e pré-processamento dos dados financeiros DFP c
 analytical_dre_dag | Dag responsável pela criação de variáveis analíticas relacionadas aos dados de DRE.
 analytical_financial_information_dag | Dag responsável pela integração das informações de cotação, pagamento de dividendos, DRE, BPA e BPE em um único dataset. 
 
+
+## cvm_fca_dag
+
+
+**ext_cvm_fca**: airflow/dags/groups/group_extractions_cvm
+
+Trata-se dos jobs responsáveis por extrairem os arquivos brutos do formulário cadastral do portal de dados. O parâmetro *dataType* define o tipo da informação.
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">RAW</font> | <font size="1.9"> extracted_{extracted_at}_fca_cia_aberta_{year}.zip</font> | <font size="1.9">Definido pelo parâmetro bucket do JOB upload_s3_raw_fca</font>  | <font size="1.9">Onde extract_at é a referente data de extração e year é o ano da informação.</font>
+
+
+**pp_cvm_fca_aberta_geral**: airflow/dags/groups/group_pre_processing_cvm
+
+O método pre_processing_cvm é utilizado para realizar o pré-processamento do arquivo fca_cia_aberta_geral (Seção 1 do Anexo 22 da ICVM 480). O tipo do arquivo é definido pelo parâmetro *dataType* fca_aberta_geral.
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">PRE-PROCESSED</font> | <font size="1.9"> pp_fca_aberta_geral_{year}.parquet</font> | <font size="1.9">Definido pelo parâmetro bucket do JOB upload_s3_pp_register</font>  | <font size="1.9">Onde year é o ano da informação.</font>
+
+**pp_cvm_fca_valor_mobiliario**: airflow/dags/groups/group_pre_processing_cvm
+
+O método pre_processing_cvm é utilizado para realizar o pré-processamento do arquivo fca_cia_aberta_valor_mobiliario (Seção 2 do Anexo 22 da ICVM 480). O tipo do arquivo é definido pelo parâmetro *dataType* fca_valor_mobiliario. 
+
+Com esse documento é possível obter os tickers utilizados na B3 das empresas. Portanto, esse arquivo pré-processado é utilizado na DAG *stock_extraction* para estabelecer quais tickers serão baixados. O arquivo é salvo no seguinte padrão register_{data de execução}_stock_tickers.parquet.
+
+Camada | Arquivo | Onde é Salvo | Descrição
+------|------ |------ |------ 
+<font size="1.9">PRE-PROCESSED</font> | <font size="1.9">pp_fca_valor_mobiliario_{year}.parquet e register_{data de execução}_stock_tickers.parquet</font> | <font size="1.9">Definido pelo parâmetro bucket do JOB upload_s3_pp_stock_type</font>  | <font size="1.9">Onde year é o ano da informação.</font>
+
+
 ## stock_extraction_dag
 
 **stock_extractions_id**: sparkFiles/stock_extraction.py
 
-Responsável por extrair a precificação diária de cada uma das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações).
+Responsável por extrair a precificação diária de cada uma das ações utilizando os pacotes investpy (Lista de ativos) e yfinance (Extrair as cotações). Vale a pena destacar que as empresas e seus respectivos tickers que serão extraídas são determinados pelo argumento **stock_tickers**. Esse arquivo é obtido pela DAG *cvm_fca_dag* que salva o o nome do arquivo com base na da data de execução da DAG. Portanto este parâmetro deve ser atualizado conforme o arquivo é re-processado.
 
 **union_stocks**: sparkFiles/union_stocks.py
 

@@ -1,7 +1,7 @@
 import argparse
 
 
-def get_stock_information(ticker_list, reference_date):
+def get_stock_information(ticker_list, reference_date, stock_tickers):
     
     import os
     import investpy
@@ -39,7 +39,7 @@ def get_stock_information(ticker_list, reference_date):
                 'ticker':'object',
                 'id_cnpj':'object'
             }
-        dataset_stocks = pd.read_csv(os.path.join(DIR_PATH_PROCESSED_FCA_STOCK_TYPE, 'register_2023_01_27_stock_tickers.csv'), dtype=dtype)
+        dataset_stocks = pd.read_csv(os.path.join(DIR_PATH_PROCESSED_FCA_STOCK_TYPE, stock_tickers), dtype=dtype)
         ticker_list = dataset_stocks['ticker_list'].to_list()
     try:
         dataset = yf.download(ticker_list, start=start, end=end,  actions=True)
@@ -107,7 +107,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--ticker_list_type", required=True)
     parser.add_argument("--reference_date", required=True)
+    parser.add_argument("--stock_tickers", required=True)
     args = parser.parse_args()
     
     print(f'Data de start: {args.reference_date}')
-    get_stock_information(ticker_list=args.ticker_list_type ,reference_date=args.reference_date)
+    get_stock_information(ticker_list=args.ticker_list_type ,reference_date=args.reference_date, stock_tickers=args.stock_tickers)

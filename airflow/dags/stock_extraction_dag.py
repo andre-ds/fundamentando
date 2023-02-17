@@ -36,7 +36,8 @@ with DAG(
         name='stock_extraction_',
         application_args=[
         '--ticker_list_type', 'file',
-        '--reference_date', EXECUTION_DATE,]
+        '--reference_date', EXECUTION_DATE,
+        '--stock_tickers', 'register_2023_01_27_stock_tickers.csv']
     )
 
     upload_s3_raw_ticker = PythonOperator(
