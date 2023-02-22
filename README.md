@@ -2,7 +2,7 @@
 
 Este é um projeto cujo objetivo principal é o desenvolvimento de um pipeline de dados capaz de fornecer o acesso a diversas informações de empresas listadas na B3 para a realização de análises fundamentalistas.
 
-As tarefas de extração de dados e pré-processamento podem ser realizadas localmente ou em cloud por meio de um container docker ou até mesmo instalando e configurando o airflow. No entanto, para os JOBs que exigem mais esforço computacional o pipeline foi construido para utilizar o serviço EMR Serveless da AWS. Ou seja, a DAG do airflow inicia um cluster EMR que consome os dados armazenados em diversos buckets da S3 e faz as transformações necessárias nos dados. Por isso, para utilização de todo o pipeline de dados desenvolvido neste projeto é preciso ter uma conta na AWS um usuário ou role IAM com as permissões para uso do serviço EMR Serveless e acesso aos buckts da S3. 
+As tarefas de extração de dados e pré-processamento podem ser realizadas localmente ou em cloud por meio de um container docker ou até mesmo instalando e configurando o airflow. No entanto, para os JOBs que exigem mais esforço computacional o pipeline foi construído para utilizar o serviço EMR Serveless da AWS. Ou seja, a DAG do airflow inicia um cluster EMR que consome os dados armazenados em diversos buckets da S3 e faz as transformações necessárias nos dados. Por isso, para utilização de todo o pipeline de dados desenvolvido neste projeto é preciso ter uma conta na AWS um usuário ou role IAM com as permissões para uso do serviço EMR Serveless e acesso aos buckts da S3. 
 
 Os detalhes de como preparar o ambiente para usar esse pipeline serão abordados na seção seguinte (Preparando o ambiente), em seguida, será apresentado brevemente como o pipeline de dados esta organizado no airflow (Arquitetura do Pipeline de Dados), posteriormente mostramos o resultado desse fluxo de processamento de dados (Arquitetura do Pipeline de Dados) e, por fim, disponibilizamos uma seção de anexo com algumas informações dos dados utilizados no projeto. A imagem a seguir apresenta um resumo do fluxo da aplicação de dados:
 
@@ -11,9 +11,9 @@ Os detalhes de como preparar o ambiente para usar esse pipeline serão abordados
 
 # Preparando o Ambiente
 
-Para rodar este pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do Linux onde tanto o airflow quanto o spark são instalados. O arquivo Dockerfile é disponibilizado no repositório - fundamentalista_pipeline/docker/Dockerfile. Caso você preferir ou não tiver intimidade com docker é possível fazer a instalação do airflow "manualmente" na sua máquina ou em cloud se for o caso. Disponibilizei uma seção em um dos meus repositórios no GIT com um passo a passo para instalar o Airflow no Linux, acesse esse link: https://github.com/andre-ds/study-plan/blob/main/airflow/instalation.md e siga as instruções. Para a instalação do Spark eu sugiro usar a documentação oficial direcionada para o seu sistema operacional, fique atento para o diretório em que o spark será instalado, vamos precisar dessa informação adiante para configurar o Airflow.
+Para rodar este pipeline você pode utilizar um container docker construído por mim a partir de uma imagem do Linux onde tanto o airflow quanto o spark são instalados. O arquivo Dockerfile é disponibilizado no repositório - fundamentando/docker/Dockerfile. Caso você preferir ou não tiver intimidade com docker é possível fazer a instalação do airflow "manualmente" na sua máquina ou em cloud se for o caso. Disponibilizei uma seção em um dos meus repositórios no GIT com um passo a passo para instalar o Airflow no Linux, acesse esse link: https://github.com/andre-ds/study-plan/blob/main/airflow/instalation.md e siga as instruções. Para a instalação do Spark eu sugiro usar a documentação oficial direcionada para o seu sistema operacional, fique atento para o diretório em que o spark será instalado, vamos precisar dessa informação adiante para configurar o Airflow.
 
-Se você optou por usurfruir dos benefícios de um container docker, partindo da premissa que você já tem o docker devidamente instalado, basta seguir as instruções destacadas a seguir:
+Se você optou por usufruir dos benefícios de um container docker, partindo da premissa que você já tem o docker devidamente instalado, basta seguir as instruções destacadas a seguir:
 
 ### 1. Criar a Imagem do Airflow
     
@@ -21,7 +21,7 @@ Com o terminal aberto no diretório onde o arquivo Dockerfile está, vamos gerar
 
 *docker build -f Dockerfile -t andre/airflow_spark .*
 
-andre/airflow_spark é o nome da imagem escolhido por mim, desta forma, pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
+andre/airflow_spark é o nome da imagem escolhida por mim, desta forma, pode ser substituida conforme a sua preferência. O ponto final indica o local onde o arquivo está armazenado, como já estamos na pasta, basta colocar esse ponto como foi sugerido. Você pode testar se tudo funcionou corretamente com o comando *docker images*.
 
 ### 2. Iniciar a Imagem
      
@@ -39,12 +39,12 @@ A partir de agora precisamos fazer algumas configurações no airflow para poder
 
 # Configurando o Airflow
 
-Dado a maneira como o docker foi desenvolvido, cada vez que o container for iniciado é necessário configurar o Airflow com três conexões e duas variáveis.
+Dado a maneira como o docker foi desenvolvido, cada vez que o container for iniciado é necessário configurar o Airflow com duas conexões e duas variáveis.
 
 
 ### 1.Conexão do Spark
 
-Para criar as conexões no Airflow acesse o menu *Admin* seguido de *Connection*. A partir disso siga o padrão definido nas tabelas, ou seja, *Connection Id* prenecha com spark, *Connection Type* selecione Spark e assim por diante. O mesmo ocorre para a coneção da AWS Geral.
+Para criar as conexões no Airflow acesse o menu *Admin* seguido de *Connections*. A partir disso siga o padrão definido nas tabelas, ou seja, *Connection Id* prenecha com spark, *Connection Type* selecione Spark e assim por diante. O mesmo ocorre para a coneção da AWS Geral.
 
 Connection Id | Connection Type | Host | Extra
 ------|------ |------ |------ |
@@ -61,7 +61,7 @@ aws_default | Amazon Web Services |<font size="1.9">{"aws_access_key_id": XXXX ,
 
 Onde XXXX serão substituídos pelos respectivos key e secret key da sua chave de acesso criados por você na sua conta da AWS. Lembrando que esse chave de ter os poderes para acessar os respectivos buckets onde os dados e códigos do pipeline são armazenados, bem como, a permissão de uso do EMR Serveless. 
 
-*Obs: Específicamente no meu caso o serviço é executado na região us-east-2 e todos os buckets estão nessa região. Faça as substituições de acordo com a sua necessidade.*
+*Obs: Especificamente no meu caso o serviço é executado na região us-east-2 e todos os buckets estão nessa região. Faça as substituições de acordo com a sua necessidade.*
 
 
 ### 3. Variáveis de Ambiente
@@ -76,11 +76,11 @@ Caso você não saiba criá-la leia as instruções da documentação da AWS - G
 
 **S3_LOGS_BUCKET**
 
-A segunda variávei de ambiente define qual é o nome do bucket S3 que serão armazenados os logs dos processos que utilizam o EMR Serveless. O Key da variávei é S3_LOGS_BUCKET e o bucket que irá no campo Val no meu caso é o fundamentus-codes. Faça o ajuste conforme a nomenclatura utilizada por você na criação do cluster.
+A segunda variável de ambiente define qual é o nome do bucket S3 que serão armazenados os logs dos processos que utilizam o EMR Serveless. O Key da variávei é S3_LOGS_BUCKET e o bucket que irá no campo Val no meu caso é o fundamentus-codes. Faça o ajuste conforme a nomenclatura utilizada por você na criação do cluster.
 
 Essas variáveis de ambiente serão utilizadas para as DAGs *analytical_dre_dag.py* e *analytical_stock_price_dag.py*.
 
-
+[](http://localhost:8080/variable/list/?_oc_VariableModelView%3Dis_encrypted%26_od_VariableModelView%3Dasc)
 **Variáveis dos Buckets** 
 
 Definina cada Key e o respectivo campo Val com o nome do bucket onde serão armazenados os dados.
