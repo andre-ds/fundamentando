@@ -199,6 +199,28 @@ class PreProcessing():
             .withColumn('ticker_list', f.concat(f.col('id_ticker'), f.lit('.SA')))
             .dropDuplicates()
         )
+        
+        df_on = (
+            dataset
+            .filter(f.col('id_ticker').contains('11'))
+            .withColumn('id_ticker', f.regexp_replace(f.col('id_ticker'), '11', '3'))
+            .withColumn('ticker_list', f.regexp_replace(f.col('ticker_list'), '11', '3'))
+
+        )
+        df_pn = (
+            dataset
+            .filter(f.col('id_ticker').contains('11'))
+            .withColumn('id_ticker', f.regexp_replace(f.col('id_ticker'), '11', '4'))
+            .withColumn('ticker_list', f.regexp_replace(f.col('ticker_list'), '11', '4'))
+        )
+
+
+        dataset = (
+            dataset
+            .union(df_on)
+            .union(df_pn)
+            .dropDuplicates()
+        )
 
         return dataset
 

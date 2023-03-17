@@ -19,10 +19,11 @@ DIR_PATH_PROCESSED_FCA_STOCK_TYPE = os.path.join(DIR_PATH, 'pre-processed-fca-st
 DIR_PATH_PROCESSED_STOCK = os.path.join(DIR_PATH, 'pre-processed-stock')
 
 
-ticker_list = 'file'
-stock_type_file = 'register_2023_01_27_stock_tickers.csv'
+ticker_list = 'parquet'
+#stock_type_file = 'register_2023_03_03_stock_tickers.csv'
+stock_type_file = 'register_2023_03_03_stock_tickers.parquet'
 start = '2000-01-01'
-end = '2023-01-29'
+end = '2023-03-10'
 
 
 '''
@@ -39,13 +40,17 @@ if ticker_list=='API':
     dataset_stocks['ticker'] = dataset_stocks['ticker'] + '.SA'
     dataset_stocks = dataset_stocks[['ticker', 'id_isin']]
     ticker_list = dataset_stocks['ticker'].to_list()
-elif ticker_list=='file':
+elif ticker_list=='csv':
     dtype={
-            'id_isin':'object',
-            'ticker':'object',
-            'id_cnpj':'object'
+            'id_cnpj':'object',
+            'id_ticker':'object',
+            'ticker_list':'object'
         }
     dataset_stocks = pd.read_csv(os.path.join(DIR_PATH_PROCESSED_FCA_STOCK_TYPE, stock_type_file), dtype=dtype)
+    ticker_list = dataset_stocks['ticker_list'].to_list()
+elif ticker_list=='parquet':
+    dataset_stocks = sk.read.parquet(os.path.join(DIR_PATH_PROCESSED_FCA_STOCK_TYPE, stock_type_file))
+    dataset_stocks = dataset_stocks.toPandas()
     ticker_list = dataset_stocks['ticker_list'].to_list()
 try:
     dataset = yf.download(ticker_list, start=start, end=end,  actions=True)

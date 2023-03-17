@@ -54,7 +54,7 @@ def pp_financial_union(type_file):
 
     dataset = (
         dataset_stock   
-        .join(dataset, on=['id', 'dt_year', 'dt_quarter'], how='inner')
+        .join(dataset, on=['id', 'dt_year', 'dt_quarter'], how='left')
         )
 
     # Saving

@@ -33,13 +33,17 @@ def get_stock_information(ticker_list, reference_date, stock_tickers):
         dataset_stocks['ticker'] = dataset_stocks['ticker'] + '.SA'
         dataset_stocks = dataset_stocks[['ticker', 'id_isin']]
         ticker_list = dataset_stocks['ticker'].to_list()
-    elif ticker_list=='file':
+    elif ticker_list=='csv':
         dtype={
-                'id_isin':'object',
-                'ticker':'object',
-                'id_cnpj':'object'
+                'id_cnpj':'object',
+                'id_ticker':'object',
+                'ticker_list':'object'
             }
         dataset_stocks = pd.read_csv(os.path.join(DIR_PATH_PROCESSED_FCA_STOCK_TYPE, stock_tickers), dtype=dtype)
+        ticker_list = dataset_stocks['ticker_list'].to_list()
+    elif ticker_list=='parquet':
+        dataset_stocks = sk.read.parquet(os.path.join(DIR_PATH_PROCESSED_FCA_STOCK_TYPE, stock_tickers))
+        dataset_stocks = dataset_stocks.toPandas()
         ticker_list = dataset_stocks['ticker_list'].to_list()
     try:
         dataset = yf.download(ticker_list, start=start, end=end,  actions=True)

@@ -19,7 +19,7 @@ FUNDAMENTUS_PRE_PROCESSED_STOCK = Variable.get('FUNDAMENTUS_PRE_PROCESSED_STOCK'
 
 with DAG(
     dag_id='stock_extractions',
-    start_date=datetime(2023, 2, 13),
+    start_date=datetime(2023, 2, 15),
     schedule_interval='10 10 * * 2-6',
     catchup=True
 ) as dag:
@@ -35,7 +35,7 @@ with DAG(
         application='/opt/sparkFiles/stock_extraction.py',
         name='stock_extraction_',
         application_args=[
-        '--ticker_list_type', 'file',
+        '--ticker_list_type', 'parquet',
         '--reference_date', EXECUTION_DATE,
         '--stock_tickers', 'register_2023_01_27_stock_tickers.csv']
     )
