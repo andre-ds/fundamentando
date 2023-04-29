@@ -70,6 +70,26 @@ varlist_financial_information_analytical = ['id_cvm', 'id_cnpj', 'txt_company_na
                 'amt_net_equity', 'amt_non_current_liabilities', 'amt_total_liabilities']
 
 
+varlist_dre_dfp = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_year', 'type_dre',
+        'amt_sales_revenue', 'amt_cost_goods_and_services', 'amt_groos_revenue', 'amt_operating_revenues_and_expenses',
+        'amt_selling_expenses', 'amt_general_administrative_expenses', 'amt_losses_non_recoverability_of_assets',
+        'amt_other_operating_income', 'amt_other_operating_expenses', 'amt_equity_equivalence', 'amt_earnings_before_interest_and_taxes',
+        'amt_financial_results', 'amt_financial_income', 'amt_financial_expenses', 'amt_earnings_before_income_tax_and_social_contribution',
+        'amt_income_tax_social_contribution_on_profit', 'amt_net_profit', 'amt_financial_intermediation_income',
+        'amt_financial_intermediation_expenses', 'amt_gross_income_financial_intermediation', 'amt_provision_for_expected_loss_expense_credit_risk',
+        'amt_income_from_service_provision', 'amt_staff_costs', 'amt_other_administrative_expenses', 'amt_tax_expenses', 'amt_other_operational_expenses']
+
+varlist_dre_itr = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_year', 'dt_quarter','type_dre',
+        'amt_sales_revenue', 'amt_cost_goods_and_services', 'amt_groos_revenue', 'amt_operating_revenues_and_expenses',
+        'amt_selling_expenses', 'amt_general_administrative_expenses', 'amt_losses_non_recoverability_of_assets',
+        'amt_other_operating_income', 'amt_other_operating_expenses', 'amt_equity_equivalence', 'amt_earnings_before_interest_and_taxes',
+        'amt_financial_results', 'amt_financial_income', 'amt_financial_expenses', 'amt_earnings_before_income_tax_and_social_contribution',
+        'amt_income_tax_social_contribution_on_profit', 'amt_net_profit', 'amt_financial_intermediation_income',
+        'amt_financial_intermediation_expenses', 'amt_gross_income_financial_intermediation', 'amt_provision_for_expected_loss_expense_credit_risk',
+        'amt_income_from_service_provision', 'amt_staff_costs', 'amt_other_administrative_expenses', 'amt_tax_expenses', 'amt_other_operational_expenses']
+
+
+
 schema_dre = StructType([
     StructField('CNPJ_CIA', StringType(), True),
     StructField('DT_REFER', StringType(), True),

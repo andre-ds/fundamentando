@@ -19,18 +19,19 @@ def pp_financial_union(type_file):
         files_list = pp.files_list(type_file=type_file)
         saveFileName = 'analytical_FPD_financial_information.parquet'
         DIR_PATH = DIR_PATH_PROCESSED_DFP
+        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'processed_at']
     elif type_file=='itr_all':
         files_list = pp.files_list(type_file=type_file)
         saveFileName = 'analytical_ITR_financial_information.parquet'
         DIR_PATH = DIR_PATH_PROCESSED_ITR
+        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'processed_at']
 
     for file in files_list:
         print(file)
         dataset_dre= sk.read.parquet(os.path.join(DIR_PATH, file[0]))
         dataset_bpa= sk.read.parquet(os.path.join(DIR_PATH, file[1]))
         dataset_bpp= sk.read.parquet(os.path.join(DIR_PATH, file[2]))
-        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'processed_at']
-
+        
         df = (
             dataset_dre
             .join(dataset_bpa, on=on_list, how='left')
