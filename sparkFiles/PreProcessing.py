@@ -290,7 +290,7 @@ class PreProcessing():
     
         from unidecode import unidecode
         from pyspark.sql.types import StringType
-        from sparkDocuments import varlist_dre_dfp
+        from sparkDocuments import varlist_dre
 
 
         def remove_accent(text):
@@ -306,7 +306,7 @@ class PreProcessing():
             dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
         dataset = dataset.withColumn('dt_months_exercise', round(months_between(col('dt_fim_exerc'), col('dt_ini_exerc'))))
         dataset = dataset.withColumn('dt_year', year('dt_refer'))
-        #dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
+        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
         dataset = dataset.filter(col('dt_months_exercise') == 12)
         ## Standarting escala_moeda
         dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
@@ -338,12 +338,12 @@ class PreProcessing():
             .when(((f.col('cd_conta')=='3.01')&(f.col('ds_conta')=='receitasintermediacao_financeira')),'type_02')
             .when(((f.col('cd_conta')=='3.01')&(f.col('ds_conta')=='receitasoperacoes')),'type_03')
             )
-            .select('cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year', 'type_dre')
+            .select('cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year', 'dt_quarter', 'type_dre')
             .filter(f.col('type_dre').isNotNull())
             .dropDuplicates()
         )
 
-        varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year']
+        varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year', 'dt_quarter']
         dataset = (
             dataset
             .join(df_ty, on=varlist_on, how='left')
@@ -445,9 +445,9 @@ class PreProcessing():
 
         dataset = (
             dataset
-            .groupBy(varlist_dre_dfp[0:8])
+            .groupBy(varlist_dre[0:9])
             .agg(
-                *[f.sum(c).alias(c) for c in varlist_dre_dfp[9:]]
+                *[f.sum(c).alias(c) for c in varlist_dre[10:]]
             )
             .withColumnRenamed('type_dre', 'cat_type_dre')
         )
@@ -456,69 +456,218 @@ class PreProcessing():
 
 
     def _pre_processing_itr_bpp(self, dataset:DataFrame) -> DataFrame:
-        
-        from sparkDocuments import bpp_account
+    
+        from unidecode import unidecode
+        from pyspark.sql.types import StringType
+        from sparkDocuments import varlist_bpp
+
+        def remove_accent(text):
+            return unidecode(text)
 
         # Pre-processing
         for var in dataset.columns:
             dataset = dataset.withColumnRenamed(var, var.lower())
         # Keeping las registers
-        dataset = dataset.filter(col('ordem_exerc') == 'ÚLTIMO')
+        dataset = dataset.filter(f.col('ordem_exerc') == 'ÚLTIMO')
         ## Getting year and quarter
         for v in ['dt_refer', 'dt_fim_exerc']:
-            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
-        dataset = dataset.withColumn('dt_year', year('dt_refer'))
-        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
+            dataset = dataset.withColumn(v, f.to_date(f.col(v), 'yyyy-MM-dd'))
+        dataset = dataset.withColumn('dt_year', f.year('dt_refer'))
+        dataset = dataset.withColumn('dt_quarter', f.quarter('dt_refer'))
         ## Standarting ESCALA_MOEDA
-        dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
-        ## Keeping only relevants cd_conta
-        listKey = list(bpp_account.keys())
-        dataset = dataset.filter(col('cd_conta').isin(listKey))
-        for k in listKey:
-            dataset = dataset.withColumn('cd_conta', regexp_replace('cd_conta', '^' + k + '$', bpp_account.get(k)))
-        # Pivot dataset
-        varlist = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_year', 'dt_quarter']
-        dataset = dataset.groupBy(varlist).pivot('cd_conta').max('vl_conta').na.fill(0)
+        dataset = dataset.withColumn('vl_conta', f.when(f.col('escala_moeda') == 'MIL', f.col('vl_conta')*1000).otherwise(f.col('vl_conta')))
+
+        ## Pre-processing account type
+        remove_accent_udf = f.udf(remove_accent, StringType())
+
+        dataset = (
+            dataset
+            .withColumn('cd_conta', f.trim(f.col('cd_conta')))
+            .withColumn('ds_conta', f.trim(f.col('ds_conta')))
+            .withColumn('ds_conta', f.lower(f.col('ds_conta')))
+            .withColumn('ds_conta', remove_accent_udf(f.col('ds_conta')))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '[,.\\\(\)\/-/&]', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+e\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+de\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+do\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+dos\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+da\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+das\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+por\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+', '_'))
+        )
+
+        df_ty = (
+            dataset
+            .withColumn('cat_type_dre',
+            f.when(((f.col('cd_conta')=='2.01')&(f.col('ds_conta')=='passivo_circulante')),'type_01')
+            .when(((f.col('cd_conta')=='2.01')&(f.col('ds_conta')=='passivos_financeiros_ao_valor_justo_atravesresultado')), 'type_02')
+            .when(((f.col('cd_conta')=='2.02.01')&(f.col('ds_conta')=='passivo_exigivel_a_longo_prazo')),'type_03')
+            )
+            .select('cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre')
+            .filter(f.col('cat_type_dre').isNotNull())
+            .dropDuplicates()
+        )
+
+        varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter']
+        dataset = (
+            dataset
+            .join(df_ty, on=varlist_on, how='left')
+        )
+
+        # Type 01
+        dataset = (
+            dataset
+            .withColumn('amt_total_liabilities', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2'), f.col('vl_conta')))
+            .withColumn('amt_current_liabilities', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.01'), f.col('vl_conta')))
+            .withColumn('amt_non_current_liabilities', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.02'), f.col('vl_conta')))
+            .withColumn('amt_loans_financing', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.02.01'), f.col('vl_conta')))
+            .withColumn('amt_net_equity', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.03'), f.col('vl_conta')))
+        )
+
+        # Type 02
+        dataset = (
+            dataset
+            .withColumn('amt_total_liabilities', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='2'), f.col('vl_conta')).otherwise(f.col('amt_total_liabilities')))
+            .withColumn('amt_provisions', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='2.03'), f.col('vl_conta')))
+            .withColumn('amt_net_equity', f.when((f.col('cat_type_dre')=='')&(f.col('cd_conta')=='2.07'), f.col('vl_conta')).otherwise(f.col('amt_net_equity')))
+        )
+
+        # Type 03
+        dataset = (
+            dataset
+            .withColumn('amt_total_liabilities', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2'), f.col('vl_conta')).otherwise(f.col('amt_total_liabilities')))
+            .withColumn('amt_current_liabilities', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2.01'), f.col('vl_conta')).otherwise(f.col('amt_current_liabilities')))
+            .withColumn('amt_non_current_liabilities', f.when((f.col('cat_type_dre')=='')&(f.col('cd_conta')=='2.02'), f.col('vl_conta')).otherwise(f.col('amt_non_current_liabilities')))
+            .withColumn('amt_long_term_liabilities', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2.02.01'), f.col('vl_conta')))
+            .withColumn('amt_net_equity', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2.03'), f.col('vl_conta')).otherwise(f.col('amt_net_equity')))
+        )
         # Rename all variables to upercase
-        variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
+        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
         # Standardizing id_cnpj
-        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
+        dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+        dataset = (
+            dataset
+            .select(*varlist_bpp)
+            .groupBy(varlist_bpp[0:8])
+            .agg(
+                *[f.sum(c).alias(c) for c in varlist_bpp[9:]]
+            )
+        )
 
         return dataset
         
 
     def _pre_processing_itr_bpa(self, dataset:DataFrame) -> DataFrame:
+ 
+        from unidecode import unidecode
+        from pyspark.sql.types import StringType
+        from sparkDocuments import varlist_bpa
 
-        from sparkDocuments import bpa_account
+        def remove_accent(text):
+            return unidecode(text)
 
         # Pre-processing
         for var in dataset.columns:
             dataset = dataset.withColumnRenamed(var, var.lower())
         # Keeping las registers
-        dataset = dataset.filter(col('ordem_exerc') == 'ÚLTIMO')
+        dataset = dataset.filter(f.col('ordem_exerc') == 'ÚLTIMO')
         ## Getting year and quarter
         for v in ['dt_refer', 'dt_fim_exerc']:
-            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
-        dataset = dataset.withColumn('dt_year', year('dt_refer'))
-        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
+            dataset = dataset.withColumn(v, f.to_date(f.col(v), 'yyyy-MM-dd'))
+        dataset = dataset.withColumn('dt_year', f.year('dt_refer'))
+        dataset = dataset.withColumn('dt_quarter', f.quarter('dt_refer'))
         ## Standarting ESCALA_MOEDA
-        dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
-        ## Keeping only relevants cd_conta
-        listKey = list(bpa_account.keys())
-        dataset = dataset.filter(col('cd_conta').isin(listKey))
-        for k in listKey:
-            dataset = dataset.withColumn('cd_conta', regexp_replace('cd_conta', '^' + k + '$', bpa_account.get(k)))
-        # Pivot dataset
-        varlist = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_year', 'dt_quarter']
-        dataset = dataset.groupBy(varlist).pivot('cd_conta').max('vl_conta').na.fill(0)
+        dataset = dataset.withColumn('vl_conta', f.when(f.col('escala_moeda') == 'MIL', f.col('vl_conta')*1000).otherwise(f.col('vl_conta')))
+
+        ## Pre-processing account type
+        remove_accent_udf = f.udf(remove_accent, StringType())
+
+        dataset = (
+            dataset
+            .withColumn('cd_conta', f.trim(f.col('cd_conta')))
+            .withColumn('ds_conta', f.trim(f.col('ds_conta')))
+            .withColumn('ds_conta', f.lower(f.col('ds_conta')))
+            .withColumn('ds_conta', remove_accent_udf(f.col('ds_conta')))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '[,.\\\(\)\/-/&]', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+e\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+de\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+do\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+dos\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+da\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+das\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+por\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+', '_'))
+        )
+
+        df_ty = (
+            dataset
+            .withColumn('cat_type_dre',
+            f.when(((f.col('cd_conta')=='1.01')&(f.col('ds_conta')=='ativo_circulante')),'type_01')
+            .when(((f.col('cd_conta')=='1.01')&(f.col('ds_conta')=='caixaequivalentescaixa')), 'type_02')
+            .when(((f.col('cd_conta')=='1.01.01')&(f.col('ds_conta')=='caixaequivalentescaixa')),'type_03')
+            )
+            .select('cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre')
+            .filter(f.col('cat_type_dre').isNotNull())
+            .dropDuplicates()
+        )
+
+        varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter']
+        dataset = (
+            dataset
+            .join(df_ty, on=varlist_on, how='left')
+        )
+
+        # Type 01
+        dataset = (
+            dataset
+            .withColumn('amt_total_assets', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1'), f.col('vl_conta')))
+            .withColumn('amt_current_assets', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.01'), f.col('vl_conta')))
+            .withColumn('amt_cash_and_cash_equivalents', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.01.01'), f.col('vl_conta')))
+            .withColumn('amt_non_current_assets', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02'), f.col('vl_conta')))
+            .withColumn('amt_investments', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02.02'), f.col('vl_conta')))
+            .withColumn('amt_immobilized', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02.03'), f.col('vl_conta')))
+            .withColumn('amt_intangible', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02.04'), f.col('vl_conta')))
+        )
+
+        # Type 02
+        dataset = (
+            dataset
+            .withColumn('amt_total_assets', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1'), f.col('vl_conta')).otherwise(f.col('amt_total_assets.')))
+            .withColumn('amt_cash_and_cash_equivalents', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.01'), f.col('vl_conta')).otherwise(f.col('amt_cash_and_cash_equivalents')))
+            .withColumn('amt_finatial_assets', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.02'), f.col('vl_conta')))
+            .withColumn('amt_investments', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.05'), f.col('vl_conta')).otherwise(f.col('amt_investments')))
+            .withColumn('amt_immobilized', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.06'), f.col('vl_conta')).otherwise(f.col('amt_immobilized')))
+            .withColumn('amt_intangible', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.07'), f.col('vl_conta')).otherwise(f.col('amt_intangible')))
+        )
+
+        # Type 03
+        dataset = (
+            dataset
+            .withColumn('amt_total_assets', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1'), f.col('vl_conta')).otherwise(f.col('amt_total_assets')))
+            .withColumn('amt_current_assets', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.01'), f.col('vl_conta')).otherwise(f.col('amt_current_assets')))
+            .withColumn('amt_cash_and_cash_equivalents', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.01.01'), f.col('vl_conta')).otherwise(f.col('amt_cash_and_cash_equivalents')))
+            .withColumn('amt_non_current_assets', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.02'), f.col('vl_conta')).otherwise(f.col('amt_non_current_assets')))
+            .withColumn('amt_investments', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.02.02'), f.col('vl_conta')).otherwise(f.col('amt_investments')))
+            .withColumn('amt_immobilized', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.02.03'), f.col('vl_conta')).otherwise(f.col('amt_immobilized')))
+        )
+
         # Rename all variables to upercase
-        variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
+        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
         # Standardizing id_cnpj
-        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
+        dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+        dataset = (
+            dataset
+            .select(*varlist_bpa)
+            .groupBy(varlist_bpa[0:8])
+            .agg(
+                *[f.sum(c).alias(c) for c in varlist_bpa[8:]]
+            )
+        )
 
         return dataset
 
@@ -527,7 +676,7 @@ class PreProcessing():
 
         from unidecode import unidecode
         from pyspark.sql.types import StringType
-        from sparkDocuments import varlist_dre_itr
+        from sparkDocuments import varlist_dre
 
 
         def remove_accent(text):
@@ -549,8 +698,6 @@ class PreProcessing():
             .filter(f.col('dt_months_exercise') == 3)
             .withColumn('vl_conta', f.when(f.col('escala_moeda') == 'MIL', f.col('vl_conta')*1000).otherwise(f.col('vl_conta')))
         )
-        print('teste-1')
-        dataset.show()
 
         ## Pre-processing account type
         remove_accent_udf = f.udf(remove_accent, StringType())
@@ -571,8 +718,7 @@ class PreProcessing():
             .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+por\s+', ''))
             .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+', '_'))
         )
-        print('teste-2')
-        dataset.show()
+
         df_ty = (
             dataset
             .withColumn('type_dre',
@@ -584,15 +730,13 @@ class PreProcessing():
             .filter(f.col('type_dre').isNotNull())
             .dropDuplicates()
         )
-        print('teste-3')
-        df_ty.show()
+
         varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year', 'dt_quarter']
         dataset = (
             dataset
             .join(df_ty, on=varlist_on, how='left')
         )
-        print('teste-4')
-        dataset.show()
+
         # Geral
         dataset = (
             dataset
@@ -631,8 +775,7 @@ class PreProcessing():
             .withColumn('amt_net_profit',
             f.when((f.col('ds_conta').rlike('^lucroprejuizo_consolidadoperiodo$|^lucro_ou_prejuizo_liquido_consolidadoperiodo$'))&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
         )
-        print('teste-5')
-        dataset.show()
+
         # Bank resultado_bruto_intermediacao_financeira
         dataset = (
             dataset
@@ -667,8 +810,7 @@ class PreProcessing():
             .withColumn('amt_net_profit',
             f.when((f.col('ds_conta').rlike('^lucro_ou_prejuizo_liquido_consolidadoperiodo$|^lucroprejuizo_consolidadoperiodo$'))&(f.col('type_dre')=='type_02'), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
         )
-        print('teste-6')
-        dataset.show()
+
         dataset = (
             dataset
             .withColumn('amt_sales_revenue', f.when((f.col('ds_conta').rlike('outras_receitasdespesas_operacionais|^receitasoperacoes$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_sales_revenue')))
@@ -681,22 +823,20 @@ class PreProcessing():
             .withColumn('amt_income_tax_social_contribution_on_profit', f.when((f.col('ds_conta').rlike('^impostorendacontribuicao_social_sobre_o_lucro$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_income_tax_social_contribution_on_profit')))
             .withColumn('amt_net_profit', f.when((f.col('ds_conta').rlike('lucroprejuizo_consolidadoperiodo'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
         )
-        print('teste-7')
-        dataset.show()
+
         # Rename all variables to upercase
         variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
         # Standardizing id_cnpj
         dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
-        print('teste-6')
-        dataset.show()
+
 
         dataset = (
             dataset
-            .groupBy(varlist_dre_itr[0:9])
+            .groupBy(varlist_dre[0:9])
             .agg(
-                *[f.sum(c).alias(c) for c in varlist_dre_itr[10:]]
+                *[f.sum(c).alias(c) for c in varlist_dre[10:]]
             )
             .withColumnRenamed('type_dre', 'cat_type_dre')
         )
@@ -704,70 +844,223 @@ class PreProcessing():
         return dataset
 
 
-    def _pre_processing_dfp_bpa(self, dataset:DataFrame) -> DataFrame:
+    def _pre_processing_bpa(self, dataset:DataFrame) -> DataFrame:
 
-        from sparkDocuments import bpa_account
+        from unidecode import unidecode
+        from pyspark.sql.types import StringType
+        from sparkDocuments import varlist_bpa
+
+        def remove_accent(text):
+            return unidecode(text)
+
 
         # Pre-processing
         for var in dataset.columns:
             dataset = dataset.withColumnRenamed(var, var.lower())
         # Keeping las registers
-        dataset = dataset.filter(col('ordem_exerc') == 'ÚLTIMO')
+        dataset = dataset.filter(f.col('ordem_exerc') == 'ÚLTIMO')
         ## Getting year and quarter
         for v in ['dt_refer', 'dt_fim_exerc']:
-            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
-        dataset = dataset.withColumn('dt_year', year('dt_refer'))
-        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
-        ## Standarting escala_moeda
-        dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
-        ## Keeping only relevants cd_conta
-        listKey = list(bpa_account.keys())
-        dataset = dataset.filter(col('cd_conta').isin(listKey))
-        for k in listKey:
-            dataset = dataset.withColumn('cd_conta', regexp_replace('cd_conta', '^' + k + '$', bpa_account.get(k)))
-        # Pivot dataset
-        varlist = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_year', 'dt_quarter']
-        dataset = dataset.groupBy(varlist).pivot('cd_conta').max('vl_conta').na.fill(0)
+            dataset = dataset.withColumn(v, f.to_date(f.col(v), 'yyyy-MM-dd'))
+        dataset = dataset.withColumn('dt_year', f.year('dt_refer'))
+        dataset = dataset.withColumn('dt_quarter', f.quarter('dt_refer'))
+        ## Standarting ESCALA_MOEDA
+        dataset = dataset.withColumn('vl_conta', f.when(f.col('escala_moeda') == 'MIL', f.col('vl_conta')*1000).otherwise(f.col('vl_conta')))
+
+        ## Pre-processing account type
+        remove_accent_udf = f.udf(remove_accent, StringType())
+
+        dataset = (
+            dataset
+            .withColumn('cd_conta', f.trim(f.col('cd_conta')))
+            .withColumn('ds_conta', f.trim(f.col('ds_conta')))
+            .withColumn('ds_conta', f.lower(f.col('ds_conta')))
+            .withColumn('ds_conta', remove_accent_udf(f.col('ds_conta')))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '[,.\\\(\)\/-/&]', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+e\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+de\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+do\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+dos\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+da\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+das\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+por\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+', '_'))
+        )
+
+        df_ty = (
+            dataset
+            .withColumn('cat_type_dre',
+            f.when(((f.col('cd_conta')=='1.01')&(f.col('ds_conta')=='ativo_circulante')),'type_01')
+            .when(((f.col('cd_conta')=='1.01')&(f.col('ds_conta')=='caixaequivalentescaixa')), 'type_02')
+            .when(((f.col('cd_conta')=='1.01.01')&(f.col('ds_conta')=='caixaequivalentescaixa')),'type_03')
+            )
+            .select('cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre')
+            .filter(f.col('cat_type_dre').isNotNull())
+            .dropDuplicates()
+        )
+
+        varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter']
+        dataset = (
+            dataset
+            .join(df_ty, on=varlist_on, how='left')
+        )
+
+        # Type 01
+        dataset = (
+            dataset
+            .withColumn('amt_total_assets', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1'), f.col('vl_conta')))
+            .withColumn('amt_current_assets', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.01'), f.col('vl_conta')))
+            .withColumn('amt_cash_and_cash_equivalents', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.01.01'), f.col('vl_conta')))
+            .withColumn('amt_non_current_assets', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02'), f.col('vl_conta')))
+            .withColumn('amt_investments', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02.02'), f.col('vl_conta')))
+            .withColumn('amt_immobilized', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02.03'), f.col('vl_conta')))
+            .withColumn('amt_intangible', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='1.02.04'), f.col('vl_conta')))
+        )
+
+        # Type 02
+        dataset = (
+            dataset
+            .withColumn('amt_total_assets', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1'), f.col('vl_conta')).otherwise(f.col('amt_total_assets')))
+            .withColumn('amt_cash_and_cash_equivalents', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.01'), f.col('vl_conta')).otherwise(f.col('amt_cash_and_cash_equivalents')))
+            .withColumn('amt_finatial_assets', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.02'), f.col('vl_conta')))
+            .withColumn('amt_investments', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.05'), f.col('vl_conta')).otherwise(f.col('amt_investments')))
+            .withColumn('amt_immobilized', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.06'), f.col('vl_conta')).otherwise(f.col('amt_immobilized')))
+            .withColumn('amt_intangible', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='1.07'), f.col('vl_conta')).otherwise(f.col('amt_intangible')))
+        )
+
+        # Type 03
+        dataset = (
+            dataset
+            .withColumn('amt_total_assets', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1'), f.col('vl_conta')).otherwise(f.col('amt_total_assets')))
+            .withColumn('amt_current_assets', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.01'), f.col('vl_conta')).otherwise(f.col('amt_current_assets')))
+            .withColumn('amt_cash_and_cash_equivalents', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.01.01'), f.col('vl_conta')).otherwise(f.col('amt_cash_and_cash_equivalents')))
+            .withColumn('amt_non_current_assets', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.02'), f.col('vl_conta')).otherwise(f.col('amt_non_current_assets')))
+            .withColumn('amt_investments', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.02.02'), f.col('vl_conta')).otherwise(f.col('amt_investments')))
+            .withColumn('amt_immobilized', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='1.02.03'), f.col('vl_conta')).otherwise(f.col('amt_immobilized')))
+        )
+
         # Rename all variables to upercase
-        variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
+        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
         # Standardizing id_cnpj
-        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
+        dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+        dataset = (
+            dataset
+            .select(*varlist_bpa)
+            .groupBy(varlist_bpa[0:8])
+            .agg(
+                *[f.sum(c).alias(c) for c in varlist_bpa[8:]]
+            )
+        )
 
         return dataset
 
 
-    def _pre_processing_dfp_bpp(self, dataset:DataFrame) -> DataFrame:
+    def _pre_processing_bpp(self, dataset:DataFrame) -> DataFrame:
+    
+        from unidecode import unidecode
+        from pyspark.sql.types import StringType
+        from sparkDocuments import varlist_bpp
 
-        from sparkDocuments import bpp_account
+
+        def remove_accent(text):
+            return unidecode(text)
+
 
         # Pre-processing
         for var in dataset.columns:
             dataset = dataset.withColumnRenamed(var, var.lower())
         # Keeping las registers
-        dataset = dataset.filter(col('ordem_exerc') == 'ÚLTIMO')
+        dataset = dataset.filter(f.col('ordem_exerc') == 'ÚLTIMO')
         ## Getting year and quarter
         for v in ['dt_refer', 'dt_fim_exerc']:
-            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
-        dataset = dataset.withColumn('dt_year', year('dt_refer'))
-        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
-        ## Standarting escala_moeda
-        dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
-        ## Keeping only relevants cd_conta
-        listKey = list(bpp_account.keys())
-        dataset = dataset.filter(col('cd_conta').isin(listKey))
-        for k in listKey:
-            dataset = dataset.withColumn('cd_conta', regexp_replace('cd_conta', '^' + k + '$', bpp_account.get(k)))
-        # Pivot dataset
-        varlist = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_year', 'dt_quarter']
-        dataset = dataset.groupBy(varlist).pivot('cd_conta').max('vl_conta').na.fill(0)
+            dataset = dataset.withColumn(v, f.to_date(f.col(v), 'yyyy-MM-dd'))
+        dataset = dataset.withColumn('dt_year', f.year('dt_refer'))
+        dataset = dataset.withColumn('dt_quarter', f.quarter('dt_refer'))
+        ## Standarting ESCALA_MOEDA
+        dataset = dataset.withColumn('vl_conta', f.when(f.col('escala_moeda') == 'MIL', f.col('vl_conta')*1000).otherwise(f.col('vl_conta')))
+
+        ## Pre-processing account type
+        remove_accent_udf = f.udf(remove_accent, StringType())
+
+        dataset = (
+            dataset
+            .withColumn('cd_conta', f.trim(f.col('cd_conta')))
+            .withColumn('ds_conta', f.trim(f.col('ds_conta')))
+            .withColumn('ds_conta', f.lower(f.col('ds_conta')))
+            .withColumn('ds_conta', remove_accent_udf(f.col('ds_conta')))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '[,.\\\(\)\/-/&]', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+e\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+de\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+do\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+dos\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+da\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+das\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+por\s+', ''))
+            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+', '_'))
+        )
+
+        df_ty = (
+            dataset
+            .withColumn('cat_type_dre',
+            f.when(((f.col('cd_conta')=='2.01')&(f.col('ds_conta')=='passivo_circulante')),'type_01')
+            .when(((f.col('cd_conta')=='2.01')&(f.col('ds_conta')=='passivos_financeiros_ao_valor_justo_atravesresultado')), 'type_02')
+            .when(((f.col('cd_conta')=='2.02.01')&(f.col('ds_conta')=='passivo_exigivel_a_longo_prazo')),'type_03')
+            )
+            .select('cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre')
+            .filter(f.col('cat_type_dre').isNotNull())
+            .dropDuplicates()
+        )
+
+        varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter']
+        dataset = (
+            dataset
+            .join(df_ty, on=varlist_on, how='left')
+        )
+
+        # Type 01
+        dataset = (
+            dataset
+            .withColumn('amt_total_liabilities', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2'), f.col('vl_conta')))
+            .withColumn('amt_current_liabilities', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.01'), f.col('vl_conta')))
+            .withColumn('amt_non_current_liabilities', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.02'), f.col('vl_conta')))
+            .withColumn('amt_loans_financing', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.02.01'), f.col('vl_conta')))
+            .withColumn('amt_net_equity', f.when((f.col('cat_type_dre')=='type_01')&(f.col('cd_conta')=='2.03'), f.col('vl_conta')))
+        )
+
+        # Type 02
+        dataset = (
+            dataset
+            .withColumn('amt_total_liabilities', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='2'), f.col('vl_conta')).otherwise(f.col('amt_total_liabilities')))
+            .withColumn('amt_provisions', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='2.03'), f.col('vl_conta')))
+            .withColumn('amt_net_equity', f.when((f.col('cat_type_dre')=='type_02')&(f.col('cd_conta')=='2.07'), f.col('vl_conta')).otherwise(f.col('amt_net_equity')))
+        )
+
+        # Type 03
+        dataset = (
+            dataset
+            .withColumn('amt_total_liabilities', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2'), f.col('vl_conta')).otherwise(f.col('amt_total_liabilities')))
+            .withColumn('amt_current_liabilities', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2.01'), f.col('vl_conta')).otherwise(f.col('amt_current_liabilities')))
+            .withColumn('amt_non_current_liabilities', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2.02'), f.col('vl_conta')).otherwise(f.col('amt_non_current_liabilities')))
+            .withColumn('amt_long_term_liabilities', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2.02.01'), f.col('vl_conta')))
+            .withColumn('amt_net_equity', f.when((f.col('cat_type_dre')=='type_03')&(f.col('cd_conta')=='2.03'), f.col('vl_conta')).otherwise(f.col('amt_net_equity')))
+        )
+
         # Rename all variables to upercase
-        variablesRename = [['cd_cvm','id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name']]
+        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
         # Standardizing id_cnpj
-        dataset = dataset.withColumn('id_cnpj', regexp_replace(col('id_cnpj'), '[./-]', ''))
+        dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+        dataset = (
+            dataset
+            .select(*varlist_bpp)
+            .groupBy(varlist_bpp[0:8])
+            .agg(
+                *[f.sum(c).alias(c) for c in varlist_bpp[9:]]
+            )
+        )
 
         return dataset
 
@@ -821,31 +1114,43 @@ class PreProcessing():
                     dataset = self._pre_processing_itr_dre(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
-                elif dataType == 'itr_bpp':
-                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                    dataset = self._pre_processing_itr_bpp(dataset = dataset)
-                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)                   
-                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
-                elif dataType == 'itr_bpa':
-                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                    dataset = self._pre_processing_itr_bpa(dataset = dataset)
-                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)        
-                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
+                #elif dataType == 'itr_bpp':
+                #    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                #    dataset = self._pre_processing_itr_bpp(dataset = dataset)
+                #    dataset = _processed_date(dataset=dataset, execution_date=execution_date)                   
+                #    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
+               # elif dataType == 'itr_bpa':
+               #     dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+               #     dataset = self._pre_processing_bpa(dataset = dataset)
+               #     dataset = _processed_date(dataset=dataset, execution_date=execution_date)        
+               #     _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                 elif dataType == 'dfp_dre':
                     dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                     dataset = self._pre_processing_dfp_dre(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
-                elif dataType == 'dfp_bpp':
-                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                    dataset = self._pre_processing_dfp_bpp(dataset = dataset)
+                elif (dataType == 'dfp_bpp') or (dataType == 'itr_bpp'):
+                    if dataType == 'dfp_bpp':
+                        dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    elif dataType == 'itr_bpp':
+                        dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    dataset = self._pre_processing_bpp(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
-                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
-                elif dataType == 'dfp_bpa':
-                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                    dataset = self._pre_processing_dfp_bpa(dataset = dataset)
+                    if dataType == 'dfp_bpp':
+                        _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
+                    elif dataType == 'itr_bpp':
+                        _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
+                elif (dataType == 'dfp_bpa') or (dataType == 'itr_bpa'):
+                    if dataType == 'dfp_bpa':
+                        dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    elif dataType == 'itr_bpa':
+                        dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    dataset = self._pre_processing_bpa(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
-                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
+                    if dataType == 'dfp_bpa':
+                        _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
+                    elif dataType == 'itr_bpa':
+                        _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
 
 
     def get_lag(self, dataset:DataFrame, partition_var:list, order_var:list, type:str, measure:str, variable:str, nlag:int, period:int=None, period_text:str=None) -> DataFrame:
