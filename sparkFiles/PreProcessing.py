@@ -284,175 +284,6 @@ class PreProcessing():
             dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
 
         return dataset
-   
-
-    def _pre_processing_dfp_dre(self, dataset:DataFrame) -> DataFrame:
-    
-        from unidecode import unidecode
-        from pyspark.sql.types import StringType
-        from sparkDocuments import varlist_dre
-
-
-        def remove_accent(text):
-            return unidecode(text)
-
-        # Pre-processing
-        for var in dataset.columns:
-            dataset = dataset.withColumnRenamed(var, var.lower())
-        # Keeping last registers
-        dataset = dataset.filter(col('ordem_exerc') == 'ÚLTIMO')
-        ## Getting year and quarter
-        for v in ['dt_refer', 'dt_fim_exerc', 'dt_ini_exerc']:
-            dataset = dataset.withColumn(v, to_date(col(v), 'yyyy-MM-dd'))
-        dataset = dataset.withColumn('dt_months_exercise', round(months_between(col('dt_fim_exerc'), col('dt_ini_exerc'))))
-        dataset = dataset.withColumn('dt_year', year('dt_refer'))
-        dataset = dataset.withColumn('dt_quarter', quarter('dt_refer'))
-        dataset = dataset.filter(col('dt_months_exercise') == 12)
-        ## Standarting escala_moeda
-        dataset = dataset.withColumn('vl_conta', when(col('escala_moeda') == 'MIL', col('vl_conta')*1000).otherwise(col('vl_conta')))
-
-        ## Pre-processing account type
-        remove_accent_udf = f.udf(remove_accent, StringType())
-        dataset = (
-            dataset
-            .fillna(subset=['ds_conta'], value='')
-            .withColumn('cd_conta', f.trim(f.col('cd_conta')))
-            .withColumn('ds_conta', f.trim(f.col('ds_conta')))
-            .withColumn('ds_conta', f.lower(f.col('ds_conta')))
-            .withColumn('ds_conta', remove_accent_udf(f.col('ds_conta')))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '[,.\\\(\)\/-/&]', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+e\s+', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+de\s+', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+do\s+', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+dos\s+', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+da\s+', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+das\s+', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+por\s+', ''))
-            .withColumn('ds_conta', f.regexp_replace(f.col('ds_conta'), '\s+', '_'))
-        )
-
-        df_ty = (
-            dataset
-            .withColumn('type_dre',
-            f.when(((f.col('cd_conta')=='3.01')&(f.col('ds_conta')=='receitavendabens_eou_servicos')),'type_01')
-            .when(((f.col('cd_conta')=='3.01')&(f.col('ds_conta')=='receitasintermediacao_financeira')),'type_02')
-            .when(((f.col('cd_conta')=='3.01')&(f.col('ds_conta')=='receitasoperacoes')),'type_03')
-            )
-            .select('cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year', 'dt_quarter', 'type_dre')
-            .filter(f.col('type_dre').isNotNull())
-            .dropDuplicates()
-        )
-
-        varlist_on = ['cd_cvm', 'cnpj_cia', 'denom_cia', 'dt_refer', 'dt_fim_exerc', 'dt_ini_exerc', 'dt_year', 'dt_quarter']
-        dataset = (
-            dataset
-            .join(df_ty, on=varlist_on, how='left')
-        )
-
-        # Geral
-        dataset = (
-            dataset
-            .withColumn('amt_sales_revenue',
-            f.when((f.col('ds_conta').rlike('receitavendabens_eou_servicos'))&(f.col('cd_conta')=='3.01')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_cost_goods_and_services',
-            f.when((f.col('ds_conta').rlike('custobens_eou_servicos_vendidos'))&(f.col('cd_conta')=='3.02')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_groos_revenue',
-            f.when((f.col('ds_conta').rlike('^resultado_bruto$'))&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_operating_revenues_and_expenses', 
-            f.when((f.col('ds_conta').rlike('^despesasreceitas_operacionais$'))&(f.col('cd_conta')=='3.04')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_selling_expenses',
-            f.when((f.col('ds_conta').rlike('^despesas_com_vendas$'))&(f.col('cd_conta')=='3.04.01')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_general_administrative_expenses',
-            f.when((f.col('ds_conta').rlike('^despesas_geraisadministrativas$'))&(f.col('cd_conta')=='3.04.02')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_losses_non_recoverability_of_assets',
-            f.when((f.col('ds_conta').rlike('^perdas_pela_nao_recuperabilidadeativos$'))&(f.col('cd_conta')=='3.04.03')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_other_operating_income',
-            f.when((f.col('ds_conta').rlike('^outras_receitas_operacionais$'))&(f.col('cd_conta')=='3.04.04')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_other_operating_expenses',
-            f.when((f.col('ds_conta').rlike('^outras_despesas_operacionais$'))&(f.col('cd_conta')=='3.04.05')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_equity_equivalence',
-            f.when((f.col('ds_conta').rlike('^resultadoequivalencia_patrimonial$'))&(f.col('cd_conta')=='3.04.06')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_earnings_before_interest_and_taxes',
-            f.when((f.col('ds_conta').rlike('^resultado_antesresultado_financeirodos_tributos$'))&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_financial_results',
-            f.when((f.col('ds_conta').rlike('^resultado_financeiro$'))&(f.col('cd_conta')=='3.06')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_financial_income',
-            f.when((f.col('ds_conta').rlike('^receitas_financeiras$'))&(f.col('cd_conta')=='3.06.01')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_financial_expenses',
-            f.when((f.col('ds_conta').rlike('^despesas_financeiras$'))&(f.col('cd_conta')=='3.06.02')&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_earnings_before_income_tax_and_social_contribution',
-            f.when((f.col('ds_conta').rlike('^resultado_antestributos_sobre_o_lucro$'))&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_income_tax_social_contribution_on_profit',
-            f.when((f.col('ds_conta').rlike('^impostorendacontribuicao_social_sobre_o_lucro$'))&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-            .withColumn('amt_net_profit',
-            f.when((f.col('ds_conta').rlike('^lucroprejuizo_consolidadoperiodo$|^lucro_ou_prejuizo_liquido_consolidadoperiodo$'))&(f.col('type_dre')=='type_01'), f.col('vl_conta')))
-        )
-
-        # Bank resultado_bruto_intermediacao_financeira
-        dataset = (
-            dataset
-            .withColumn('amt_financial_intermediation_income',
-            f.when((f.col('ds_conta').rlike('receitasintermediacao_financeira'))&(f.col('cd_conta')=='3.01'), f.col('vl_conta')))
-            .withColumn('amt_financial_intermediation_expenses',
-            f.when((f.col('ds_conta').rlike('^despesasintermediacao_financeira$'))&(f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.02'), f.col('vl_conta')))
-            .withColumn('amt_operating_revenues_and_expenses', 
-            f.when((f.col('ds_conta').rlike('^outras_despesasreceitas_operacionais$'))&(f.col('cd_conta')=='3.04')&(f.col('type_dre')=='type_02'), f.col('vl_conta')).otherwise(f.col('amt_operating_revenues_and_expenses')))
-            .withColumn('amt_gross_income_financial_intermediation',
-            f.when((f.col('ds_conta').rlike('resultado_brutointermediacao_financeira|resultado_bruto_intermediacao_financeira'))&(f.col('cd_conta')=='3.03'), f.col('vl_conta')))
-            .withColumn('amt_provision_for_expected_loss_expense_credit_risk',
-            f.when((f.col('ds_conta').rlike('despesaprovisao_para_perda_esperada_para_riscocredito|despesaprovisao_perda_esperada_para_riscocredito'))&(f.col('cd_conta')=='3.04.01'), f.col('vl_conta')))
-            .withColumn('amt_income_from_service_provision',
-            f.when((f.col('ds_conta').rlike('^receitasprestacaoservicos$'))&(f.col('cd_conta')=='3.04.02'), f.col('vl_conta')))
-            .withColumn('amt_staff_costs',
-            f.when((f.col('ds_conta').rlike('^despesas_com_pessoal$'))&(f.col('cd_conta')=='3.04.03')&(f.col('type_dre')=='type_02'), f.col('vl_conta')))
-            .withColumn('amt_other_administrative_expenses',
-            f.when((f.col('ds_conta').rlike('^outras_despesas_administrativas$'))&(f.col('type_dre')=='type_02'), f.col('vl_conta')))
-            .withColumn('amt_other_operating_income',
-            f.when((f.col('ds_conta').rlike('^outras_receitas_operacionais$'))&(f.col('cd_conta')=='3.04.06')&(f.col('type_dre')=='type_02'), f.col('vl_conta')).otherwise(f.col('amt_other_operating_income')))
-            .withColumn('amt_tax_expenses',
-            f.when((f.col('ds_conta').rlike('^despesas_tributarias$')), f.col('vl_conta')))
-            .withColumn('amt_other_operational_expenses',
-            f.when((f.col('ds_conta').rlike('outras_despesas_operacionais'))&(f.col('cd_conta')=='3.04.07'), f.col('vl_conta')))
-            .withColumn('amt_equity_equivalence',
-            f.when((f.col('ds_conta').rlike('^resultadoequivalencia_patrimonial$'))&(f.col('cd_conta')=='3.04.08')&(f.col('type_dre')=='type_02'), f.col('vl_conta')).otherwise(f.col('amt_equity_equivalence')))
-            .withColumn('amt_earnings_before_income_tax_and_social_contribution',
-            f.when((f.col('ds_conta').rlike('^resultado_antestributos_sobre_o_lucro$'))&(f.col('type_dre')=='type_02'), f.col('vl_conta')).otherwise(f.col('amt_earnings_before_income_tax_and_social_contribution')))
-            .withColumn('amt_income_tax_social_contribution_on_profit',
-            f.when((f.col('ds_conta').rlike('^impostorendacontribuicao_social_sobre_o_lucro$'))&(f.col('type_dre')=='type_02'), f.col('vl_conta')).otherwise(f.col('amt_income_tax_social_contribution_on_profit')))
-            .withColumn('amt_net_profit',
-            f.when((f.col('ds_conta').rlike('^lucro_ou_prejuizo_liquido_consolidadoperiodo$|^lucroprejuizo_consolidadoperiodo$'))&(f.col('type_dre')=='type_02'), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
-        )
-
-        dataset = (
-            dataset
-            .withColumn('amt_sales_revenue', f.when((f.col('ds_conta').rlike('outras_receitasdespesas_operacionais|^receitasoperacoes$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_sales_revenue')))
-            .withColumn('amt_cost_goods_and_services', f.when((f.col('ds_conta').rlike('custoservicos_prestados'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_cost_goods_and_services')))
-            .withColumn('amt_staff_costs', f.when((f.col('ds_conta').rlike('^despesas_com_pessoal$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_staff_costs')))
-            .withColumn('amt_other_administrative_expenses', f.when((f.col('cd_conta')=='3.05.04')&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_other_administrative_expenses')))
-            .withColumn('amt_equity_equivalence', f.when((f.col('ds_conta').rlike('resultadoequivalencia_patrimonial'))&(f.col('cd_conta')=='3.06'), f.col('vl_conta')).otherwise(f.col('amt_equity_equivalence')))
-            .withColumn('amt_earnings_before_interest_and_taxes', f.when((f.col('ds_conta').rlike('resultado_antesresultado_financeirodos_tributos'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_earnings_before_interest_and_taxes')))
-            .withColumn('amt_earnings_before_income_tax_and_social_contribution', f.when((f.col('ds_conta').rlike('resultado_antestributos_sobre_o_lucro'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_earnings_before_income_tax_and_social_contribution')))
-            .withColumn('amt_income_tax_social_contribution_on_profit', f.when((f.col('ds_conta').rlike('^impostorendacontribuicao_social_sobre_o_lucro$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_income_tax_social_contribution_on_profit')))
-            .withColumn('amt_net_profit', f.when((f.col('ds_conta').rlike('lucroprejuizo_consolidadoperiodo'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
-        )
-
-        # Rename all variables to upercase
-        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
-        for v in variablesRename:
-            dataset = dataset.withColumnRenamed(v[0], v[1])
-        # Standardizing id_cnpj
-        dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
-
-        dataset = (
-            dataset
-            .groupBy(varlist_dre[0:9])
-            .agg(
-                *[f.sum(c).alias(c) for c in varlist_dre[10:]]
-            )
-            .withColumnRenamed('type_dre', 'cat_type_dre')
-        )
-
-        return dataset
 
 
     def _pre_processing_itr_bpp(self, dataset:DataFrame) -> DataFrame:
@@ -672,7 +503,7 @@ class PreProcessing():
         return dataset
 
 
-    def _pre_processing_itr_dre(self, dataset:DataFrame) -> DataFrame:
+    def _pre_processing_dre(self, dataset:DataFrame) -> DataFrame:
 
         from unidecode import unidecode
         from pyspark.sql.types import StringType
@@ -1109,26 +940,17 @@ class PreProcessing():
                     dataset = self._pre_processing_fca_valor_mobiliario(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_FCA_STOCK_TYPE)                
-                elif dataType == 'itr_dre':
-                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                    dataset = self._pre_processing_itr_dre(dataset = dataset)
+                elif (dataType == 'dfp_dre') or (dataType == 'itr_dre'):
+                    if dataType == 'dfp_dre':
+                        dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    elif dataType == 'itr_dre':
+                        dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    dataset = self._pre_processing_dre(dataset = dataset)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
-                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
-                #elif dataType == 'itr_bpp':
-                #    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                #    dataset = self._pre_processing_itr_bpp(dataset = dataset)
-                #    dataset = _processed_date(dataset=dataset, execution_date=execution_date)                   
-                #    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
-               # elif dataType == 'itr_bpa':
-               #     dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-               #     dataset = self._pre_processing_bpa(dataset = dataset)
-               #     dataset = _processed_date(dataset=dataset, execution_date=execution_date)        
-               #     _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
-                elif dataType == 'dfp_dre':
-                    dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                    dataset = self._pre_processing_dfp_dre(dataset = dataset)
-                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
-                    _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
+                    if dataType == 'dfp_dre':
+                        _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
+                    elif dataType == 'itr_dre':
+                        _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                 elif (dataType == 'dfp_bpp') or (dataType == 'itr_bpp'):
                     if dataType == 'dfp_bpp':
                         dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
