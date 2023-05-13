@@ -23,7 +23,7 @@ ticker_list = 'parquet'
 #stock_type_file = 'register_2023_03_03_stock_tickers.csv'
 stock_type_file = 'register_2023_03_03_stock_tickers.parquet'
 start = '2000-01-01'
-end = '2023-03-10'
+end = '2023-04-30'
 
 
 '''

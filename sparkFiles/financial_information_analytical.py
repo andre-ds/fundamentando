@@ -26,35 +26,98 @@ def pp_financial_union(type_file):
 
     for file in files_list:
         print(file)
-        dataset_dre= sk.read.parquet(os.path.join(DIR_PATH, file[0]))
-        dataset_bpa= sk.read.parquet(os.path.join(DIR_PATH, file[1]))
-        dataset_bpp= sk.read.parquet(os.path.join(DIR_PATH, file[2]))
+        dataset_dre= (
+            sk.read.parquet(os.path.join(DIR_PATH, file[0]))
+            .drop('dt_ini_exerc')
+            .withColumn('dt_refer', f.col('dt_refer').cast('string'))
+            .withColumn('dt_fim_exerc', f.col('dt_fim_exerc').cast('string'))
+        )
+        dataset_bpa= (
+            sk.read.parquet(os.path.join(DIR_PATH, file[1]))
+            .withColumn('dt_refer', f.col('dt_refer').cast('string'))
+            .withColumn('dt_fim_exerc', f.col('dt_fim_exerc').cast('string'))
+        )
+        dataset_bpp = (
+            sk.read.parquet(os.path.join(DIR_PATH, file[2]))
+            .withColumn('dt_refer', f.col('dt_refer').cast('string'))
+            .withColumn('dt_fim_exerc', f.col('dt_fim_exerc').cast('string'))
+        )
 
-        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'processed_at']        
+        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'cat_type_dre', 'dt_fim_exerc', 'dt_refer', 'processed_at']
         df = (
             dataset_dre
             .join(dataset_bpa, on=on_list, how='left')
             .join(dataset_bpp, on=on_list, how='left')
-            .select(varlist_financial_information_analytical)
         )
-        dataset = dataset.union(df)
+        dataset = dataset.union(df.select(dataset.columns))
     
     dataset = dataset.withColumn('id', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
     dataset_stock = sk.read.parquet(os.path.join(DIR_PATH_PROCESSED_STOCK, 'pp_stock_union.parquet'))
     dataset_stock = (
         dataset_stock
-        .withColumn('dt_year', f.year(f.col('date')))
-        .withColumn('dt_quarter', f.quarter(f.col('date')))
-        .groupBy('id_cnpj', 'ticker' ,'dt_year', 'dt_quarter')
-        .agg(f.max(f.col('date')).alias('date'))
-        .join(dataset_stock, on=['id_cnpj', 'ticker', 'date'], how='inner')
+        .withColumn('dt_year', f.year(f.col('dt_date')))
+        .withColumn('dt_quarter', f.quarter(f.col('dt_date')))
+        .groupBy('id_cnpj', 'id_ticker' ,'dt_year', 'dt_quarter')
+        .agg(f.max(f.col('dt_date')).alias('dt_date'))
+        .join(dataset_stock, on=['id_cnpj', 'id_ticker', 'dt_date'], how='inner')
         .withColumnRenamed('id_cnpj', 'id')
-        .select('id', 'ticker','dt_year', 'dt_quarter', 'adj_close', 'dividends')
+        .select('id', 'id_ticker','dt_year', 'dt_quarter', 'amt_adj_close', 'amt_dividends')
     )
 
     dataset = (
-        dataset_stock   
-        .join(dataset, on=['id', 'dt_year', 'dt_quarter'], how='left')
+        dataset   
+        .join(dataset_stock, on=['id', 'dt_year', 'dt_quarter'], how='left')
+        .select(varlist_financial_information_analytical)
+        )
+
+    if type_file=='itr_all':
+        fileFPD = 'analytical_FPD_financial_information.parquet'
+        dataset_fpd = sk.read.parquet(os.path.join(DIR_PATH_ANALYTICAL, fileFPD)).drop('processed_at')
+        # All Quarters Union
+        agg_funcs_1 = [f.sum(x).alias(f"{x}") for x in dataset.columns[9:]]
+        df_sum = (
+            dataset
+            .drop('dt_quarter', 'dt_refer', 'dt_fim_exerc')
+            .groupBy('id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_year')
+            .agg(*agg_funcs_1)
+            .withColumn('dt_quarter', f.lit(None))
+            .withColumn('dt_refer', f.lit(None))
+            .withColumn('dt_fim_exerc', f.lit(None))
+        )
+
+        for v in df_sum.columns[6:]:
+            df_sum = df_sum.withColumn(v, -f.col(v))
+
+        # Calculating Last Quarter Dataset
+        df_quarter = (
+            dataset_fpd
+            .union(df_sum.select(dataset_fpd.columns))
+            .drop('dt_quarter', 'dt_refer', 'dt_fim_exerc')
+        )
+
+        agg_func_2 = [f.sum(x).alias(f"{x}") for x in df_quarter.columns[6:]]
+        df_quarter = (
+            df_quarter
+            .groupBy('id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_year')
+            .agg(*agg_func_2)
+        )
+
+        df_ident = (
+            dataset_fpd
+            .select('id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_refer', 'dt_year', 'dt_quarter', 'dt_fim_exerc')
+            .dropDuplicates()
+        )
+
+        df_quarter = (
+            df_ident
+            .join(df_quarter, on=['id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_year'], how='left')
+        )
+
+        # Complete Dataset
+        dataset = (
+            dataset
+            .union(df_quarter.select(dataset.columns))
+            .orderBy('id_cnpj', 'dt_year', 'dt_quarter')
         )
 
     # Saving
