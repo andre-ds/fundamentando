@@ -690,6 +690,161 @@ class PreProcessing():
         return dataset
 
 
+    def _pre_processing_dfp_itr(self, df_itr:DataFrame, df_fpd:DataFrame, dataType:str) -> DataFrame:
+
+        from unidecode import unidecode
+
+        def remove_accent(text):
+            return unidecode(text)
+
+
+        def analytics_quarter(dataset, quarter):
+
+            df_quarter = (
+                dataset
+                .withColumn('net_cash_operating activities', f.when(f.col('id_account').rlike('^6.01$'), f.col(quarter)))
+                .withColumn('depreciation_amortization', f.when((f.col('txt_account').rlike('depreciacao|depreciacoes')), f.col(quarter)))
+                .withColumn('net_cash_investment_activities', f.when(f.col('id_account').rlike('^6.02$'), f.col(quarter)))
+                .withColumn('net_cash_financing_activities', f.when(f.col('id_account').rlike('^6.03$'), f.col(quarter)))
+                .withColumn('exchange_variation_without_cash_equivalents', f.when(f.col('id_account').rlike('^6.04$'), f.col(quarter)))
+                .withColumn('increase_in_cash_equivalents', f.when(f.col('id_account').rlike('^6.05$'), f.col(quarter)))
+                .withColumn('final_balance_cash_equivalents', f.when(f.col('id_account').rlike('^6.05.02$'), f.col(quarter)))
+            )
+
+            varslit_analytics = ['net_cash_operating activities', 'depreciation_amortization', 'net_cash_investment_activities',
+                                'net_cash_financing_activities', 'exchange_variation_without_cash_equivalents',
+                                'increase_in_cash_equivalents', 'final_balance_cash_equivalents']
+            df_quarter = (
+                df_quarter
+                .withColumn('dt_quarter', f.lit(quarter[1]).cast('int'))
+                .groupBy('id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter')
+                .agg(
+                    *[f.sum(c).alias(c) for c in varslit_analytics]
+                )
+            )
+
+            return df_quarter
+
+
+        dataset = (
+            df_itr.union(df_fpd.select(df_itr.columns))
+        )
+
+        for var in dataset.columns:
+            dataset = dataset.withColumnRenamed(var, var.lower())
+
+        ## Getting year and quarter
+        for v in ['dt_refer', 'dt_fim_exerc', 'dt_ini_exerc']:
+            dataset = dataset.withColumn(v, f.to_date(f.col(v), 'yyyy-MM-dd'))
+
+        dataset = (
+            dataset
+            .filter(f.col('ordem_exerc') == 'ÚLTIMO')
+            .withColumn('dt_year', f.year('dt_fim_exerc'))
+            .withColumn('dt_quarter', f.quarter('dt_fim_exerc'))
+            .withColumn('vl_conta', f.when(f.col('escala_moeda') == 'MIL', f.col('vl_conta')*1000).otherwise(f.col('vl_conta')))
+        )
+
+        # Rename all variables to upercase
+        variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['denom_cia','txt_company_name'],
+                        ['cd_conta', 'id_account'], ['ds_conta','txt_account'], ['vl_conta', 'amt_account']]
+        for v in variablesRename:
+            dataset = dataset.withColumnRenamed(v[0], v[1])
+
+
+        dataset = (
+            dataset
+            .withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+            .select('id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter',
+                    'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'id_account', 'txt_account', 'amt_account')
+        )
+
+        df_1 = (
+            dataset
+            .filter(f.col('dt_quarter')==1)
+            .withColumnRenamed('amt_account', 'Q1')
+            .drop('dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_quarter')
+        )
+
+        df_2 = (
+            dataset
+            .filter(f.col('dt_quarter')==2)
+            .withColumnRenamed('amt_account', 'Q2')
+            .drop('dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_quarter')
+        )
+
+        df_3 = (
+            dataset
+            .filter(f.col('dt_quarter')==3)
+            .withColumnRenamed('amt_account', 'Q3')
+            .drop('dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_quarter')
+        )
+
+        df_4 = (
+            dataset
+            .filter(f.col('dt_quarter')==4)
+            .withColumnRenamed('amt_account', 'Q4')
+            .drop('dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_quarter')
+        )
+
+        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'id_account', 'txt_account']
+        df = (
+            df_1
+            .join(df_2, on=on_list, how='left')
+            .join(df_3, on=on_list, how='left')
+            .join(df_4, on=on_list, how='left')
+            .orderBy('id_cnpj', 'id_account')
+        )
+
+        remove_accent_udf = f.udf(remove_accent, StringType())
+        df = (
+            df
+            .fillna(subset=['txt_account'], value='')
+            .withColumn('txt_account', remove_accent_udf(f.col('txt_account')))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '[,.\\\(\)\/-/&]', ''))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+e\s+', ' '))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+de\s+', ' '))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+do\s+', ' '))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+dos\s+', ' '))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+da\s+', ' '))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+das\s+', ' '))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+por\s+', ' '))
+            .withColumn('txt_account', f.regexp_replace(f.col('txt_account'), '\s+', '_'))
+            .withColumn('txt_account', f.lower(f.col('txt_account')))
+            .withColumnRenamed('Q2', 'Q2_cumulative')
+            .withColumnRenamed('Q3', 'Q3_cumulative')
+            .withColumnRenamed('Q4', 'Q4_cumulative')
+            .withColumn('Q2', f.col('Q2_cumulative')-f.col('Q1'))
+            .withColumn('Q3', f.col('Q3_cumulative')-f.col('Q2'))
+            .withColumn('Q4', f.col('Q4_cumulative')-f.col('Q3'))
+            .select('id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'id_account', 'txt_account', 'Q1', 'Q2', 'Q2_cumulative', 'Q3', 'Q3_cumulative', 'Q4', 'Q4_cumulative')
+        )
+
+        if dataType == 'itr_dfc':
+
+            dq_1 = analytics_quarter(dataset=df, quarter='Q1')
+            dq_2 = analytics_quarter(dataset=df, quarter='Q2')
+            dq_3 = analytics_quarter(dataset=df, quarter='Q3')
+            dq_4 = analytics_quarter(dataset=df, quarter='Q4')
+
+            df_analytical = (
+                dq_1
+                .union(dq_2)
+                .union(dq_3)
+                .union(dq_4)
+            )
+            return df_analytical
+
+
+        elif dataType == 'itr_dfc_table':
+
+            df_table = (
+                df
+                .select('id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'id_account', 'txt_account', 'Q1', 'Q2', 'Q3', 'Q4')
+            )
+            return df_table
+
+
     def pre_process_cvm(self, dataType:str, schema:StructField, year:str, execution_date:DateType):
 
 
@@ -720,7 +875,10 @@ class PreProcessing():
             list_files = [file for file in os.listdir(DIR_PATH_RAW_ITR) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
         elif dataType == 'dfp_dre' or dataType == 'dfp_bpp' or dataType == 'dfp_bpa':
             list_files = [file for file in os.listdir(DIR_PATH_RAW_DFP) if (file.endswith('.csv')) and re.findall(types_dict[dataType], file)]
+        elif dataType == 'itr_dfc' or dataType == 'itr_dfc_table':
+            list_files = [file for file in os.listdir(DIR_PATH_RAW_ITR) if (file.endswith('.csv')) and re.findall('itr_cia_aberta_DFC_MI_con', file)]
 
+    
         for file in list_files:
             if year == file[-8:-4]:
                 # Oppen Datasets
@@ -768,6 +926,17 @@ class PreProcessing():
                         _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
                     elif dataType == 'itr_bpa':
                         _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
+                elif (dataType == 'itr_dfc') or (dataType == 'itr_dfc_table'):
+                    df_itr = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    df_fpd = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, f'dfp_cia_aberta_DFC_MI_con_{file[-8:-4]}.csv'),header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                    if dataType == 'itr_dfc':
+                        df_analytical = self._pre_processing_dfp_itr(df_itr=df_itr, df_fpd=df_fpd, dataType='itr_dfc')
+                        df_analytical = _processed_date(dataset=df_analytical, execution_date=execution_date)
+                        _saving_pre_processing(dataset=df_analytical, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
+                    elif dataType == 'itr_dfc_table':
+                        df_table = self._pre_processing_dfp_itr(df_itr=df_itr, df_fpd=df_fpd, dataType='itr_dfc_table')
+                        df_table = _processed_date(dataset=df_table, execution_date=execution_date)
+                        _saving_pre_processing(dataset=df_table, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
 
 
     def get_lag(self, dataset:DataFrame, partition_var:list, order_var:list, type:str, measure:str, variable:str, nlag:int, period:int=None, period_text:str=None) -> DataFrame:

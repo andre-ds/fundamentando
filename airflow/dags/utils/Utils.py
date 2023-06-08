@@ -263,33 +263,38 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
         dataType = f'analytical_ITR_financial_information.parquet'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
-
-def download_s3(ti, bucket_name, key, dataType):
-
-    from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-
-    hook = S3Hook('s3_conn')
-
-    if dataType == 'pre-processed-stock':
-        DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_STOCK', task_ids='path_environment')
-    
-    try:
-        hook.download_file(key=key, bucket_name=bucket_name, local_path=DIR_PATH)
-    except:
-        print('There is no file.')
+    elif dataType == 'analytical-financial-dfc-mi-fpd':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_ANALYTICAL', task_ids='path_environment')
+        dataType = f'analytical_dfp_DFC_MI.parquet'
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
 
-'''
-    def __load_pp_cvm_dfp_itr(DIR_PATH, dataType):
+    def download_s3(ti, bucket_name, key, dataType):
 
-        folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
+        from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+
+        hook = S3Hook('s3_conn')
+
+        if dataType == 'pre-processed-stock':
+            DIR_PATH = ti.xcom_pull(key='DIR_PATH_PROCESSED_STOCK', task_ids='path_environment')
         
-        for folder in folder_list:
-            files_foder = [file for file in os.listdir(os.path.join(DIR_PATH, folder))]
-            for partition in files_foder:
-                DIR_PATH_PARTITION = os.path.join(os.path.join(DIR_PATH, folder), partition)
-                if os.path.isdir(DIR_PATH_PARTITION):
-                    partition_files = [file for file in os.listdir(DIR_PATH_PARTITION)]
-                    for file in partition_files:
-                        hook.load_file(filename=f'{DIR_PATH_PARTITION}/{file}', bucket_name=bucket, key=f'{folder}/{partition}/{file}', replace=True)
-'''
+        try:
+            hook.download_file(key=key, bucket_name=bucket_name, local_path=DIR_PATH)
+        except:
+            print('There is no file.')
+
+
+    '''
+        def __load_pp_cvm_dfp_itr(DIR_PATH, dataType):
+
+            folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
+            
+            for folder in folder_list:
+                files_foder = [file for file in os.listdir(os.path.join(DIR_PATH, folder))]
+                for partition in files_foder:
+                    DIR_PATH_PARTITION = os.path.join(os.path.join(DIR_PATH, folder), partition)
+                    if os.path.isdir(DIR_PATH_PARTITION):
+                        partition_files = [file for file in os.listdir(DIR_PATH_PARTITION)]
+                        for file in partition_files:
+                            hook.load_file(filename=f'{DIR_PATH_PARTITION}/{file}', bucket_name=bucket, key=f'{folder}/{partition}/{file}', replace=True)
+    '''

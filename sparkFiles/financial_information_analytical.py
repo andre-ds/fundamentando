@@ -120,6 +120,16 @@ def pp_financial_union(type_file):
             .orderBy('id_cnpj', 'dt_year', 'dt_quarter')
         )
 
+    dataset = (
+        dataset
+        .withColumn('ebit_amplo', f.col('amt_earnings_before_income_tax_and_social_contribution')+f.abs(f.col('amt_financial_expenses')))
+        .withColumn('provisao_ircs_ampla', (f.abs(f.col('amt_income_tax_social_contribution_on_profit'))/(f.abs('amt_earnings_before_income_tax_and_social_contribution')+f.abs('amt_equity_equivalence')))*f.col('ebit_amplo')+f.col('amt_equity_equivalence'))
+        .withColumn('nopat_amplo', f.col('ebit_amplo')-f.col('provisao_ircs'))
+        .withColumn('ebit_restrit', f.col('ebit_amplo')-f.col('amt_financial_income')+f.col('amt_equity_equivalence'))
+        .withColumn('provisao_ircs_restrita', (f.abs(f.col('amt_income_tax_social_contribution_on_profit'))/(f.abs('amt_earnings_before_income_tax_and_social_contribution')+f.abs('amt_equity_equivalence')))*f.col('ebit_amplo'))
+
+    )
+
     # Saving
     print('saving')
     dataset.write.format('parquet') \

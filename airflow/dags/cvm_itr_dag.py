@@ -48,6 +48,9 @@ with DAG(
     pp_cvm_itr_dre = pre_processing_cvm(dataType='itr_dre', execution_date=EXECUTION_DATE)
     pp_cvm_itr_bpp = pre_processing_cvm(dataType='itr_bpp', execution_date=EXECUTION_DATE)
     pp_cvm_itr_bpa = pre_processing_cvm(dataType='itr_bpa', execution_date=EXECUTION_DATE)
+    pp_cvm_itr_dfc = pre_processing_cvm(dataType='itr_dfc', execution_date=EXECUTION_DATE)
+    pp_cvm_itr_dfc_table = pre_processing_cvm(dataType='itr_dfc_table', execution_date=EXECUTION_DATE)
+
 
     upload_s3_p = PythonOperator(
         task_id='upload_s3_pp_itr',
@@ -61,4 +64,4 @@ with DAG(
     )
 
 environment >> ext_cvm_itr >> upload_s3_r >> unzip_cvm >> [
-    pp_cvm_itr_dre, pp_cvm_itr_bpa, pp_cvm_itr_bpp] >> upload_s3_p
+    pp_cvm_itr_dre, pp_cvm_itr_bpa, pp_cvm_itr_bpp, pp_cvm_itr_dfc, pp_cvm_itr_dfc_table] >> upload_s3_p

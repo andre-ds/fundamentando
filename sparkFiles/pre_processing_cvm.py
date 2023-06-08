@@ -2,7 +2,7 @@ import os
 import argparse
 from pyspark.context import SparkContext
 from pyspark.conf import SparkConf
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from PreProcessing import PreProcessing
 from sparkDocuments import schema_fca_register, schema_fca_stock_type, schema_dre, schema_bp_ba
 
@@ -40,3 +40,7 @@ if __name__ == "__main__":
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_bp_ba, execution_date=extract_at)
     elif args.dataType == 'itr_bpa':
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_bp_ba, execution_date=extract_at)
+    elif args.dataType == 'itr_dfc':
+        pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre, execution_date=extract_at)
+    elif args.dataType == 'itr_dfc_table':
+        pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre, execution_date=extract_at)

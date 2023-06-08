@@ -123,6 +123,7 @@ schema_bp_ba = StructType([
     StructField('ST_CONTA_FIXA', StringType(), True)
 ])
 
+
 schema_ticker = StructType([
     StructField('ticker', StringType(), True),
     StructField('date', StringType(), True),
@@ -247,6 +248,18 @@ schema_pp_bpa_bpp = StructType([
     StructField('amt_provisions', FloatType(), True),
     StructField('amt_long_term_liabilities', FloatType(), True),
 ])
+
+
+schema_pp_dfc = StructType([
+    StructField('id_cvm', StringType(), True),
+    StructField('id_cnpj', StringType(), True),
+    StructField('txt_company_name', StringType(), True),
+    StructField('dt_year', IntegerType(), True),
+    StructField('id_account', StringType(), True),
+    StructField('text_account', StringType(), True),
+    StructField('amt_account', FloatType(), True),
+])
+
 
 
 varlist_financial_information_analytical = ['id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_refer', 'dt_year', 'dt_quarter', 'dt_fim_exerc',
