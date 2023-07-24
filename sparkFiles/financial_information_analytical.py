@@ -25,38 +25,36 @@ def pp_financial_union(type_file):
         DIR_PATH = DIR_PATH_PROCESSED_ITR
 
     for file in files_list:
-        print(file)
         dataset_dre = (
             sk.read.parquet(os.path.join(DIR_PATH, file[0]))
-            .drop('dt_ini_exerc', 'cat_type_dre')
-            .withColumn('dt_refer', f.col('dt_refer').cast('string'))
+            .drop('dt_ini_exerc', 'dt_refer')
             .withColumn('dt_fim_exerc', f.col('dt_fim_exerc').cast('string'))
         )
         dataset_bpa = (
             sk.read.parquet(os.path.join(DIR_PATH, file[1]))
-            .drop('cat_type_dre')
-            .withColumn('dt_refer', f.col('dt_refer').cast('string'))
+            .drop('dt_ini_exerc', 'dt_refer', 'processed_at')
             .withColumn('dt_fim_exerc', f.col('dt_fim_exerc').cast('string'))
         )
         dataset_bpp = (
             sk.read.parquet(os.path.join(DIR_PATH, file[2]))
-            .drop('cat_type_dre')
-            .withColumn('dt_refer', f.col('dt_refer').cast('string'))
+            .drop('dt_ini_exerc', 'dt_refer', 'processed_at')
             .withColumn('dt_fim_exerc', f.col('dt_fim_exerc').cast('string'))
         )
         dataset_dfc = (
             sk.read.parquet(os.path.join(DIR_PATH, file[3]))
+            .drop('processed_at')
             .withColumn('dt_fim_exerc', f.col('dt_fim_exerc').cast('string'))
         )
-        print('teste-1')
-        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'dt_fim_exerc', 'dt_refer', 'processed_at']
+
+        on_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'dt_fim_exerc', 'cat_type_dre', ]
         df = (
             dataset_dre
             .join(dataset_bpa, on=on_list, how='left')
             .join(dataset_bpp, on=on_list, how='left')
-            .join(dataset_dfc, on=['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'dt_fim_exerc', 'processed_at'], how='left')
+            .join(dataset_dfc, on=['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'dt_quarter', 'dt_fim_exerc'], how='left')
         )
         dataset = dataset.union(df.select(dataset.columns))
+        
     print('teste-2')
     dataset = dataset.withColumn('id', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
     dataset_stock = sk.read.parquet(os.path.join(DIR_PATH_PROCESSED_STOCK, 'pp_stock_union.parquet'))
@@ -76,6 +74,8 @@ def pp_financial_union(type_file):
         .join(dataset_stock, on=['id', 'dt_year', 'dt_quarter'], how='left')
         .select(varlist_financial_information_analytical)
         )
+
+        
     print('teste-4')
     if type_file=='itr_all':
         fileFPD = 'analytical_FPD_financial_information.parquet'

@@ -254,11 +254,10 @@ schema_financial_information = StructType([
     StructField('id_cvm', StringType(), True),
     StructField('id_cnpj', StringType(), True),
     StructField('txt_company_name', StringType(), True),
-    StructField('dt_refer', StringType(), True),
     StructField('dt_fim_exerc', IntegerType(), True),
     StructField('dt_year', IntegerType(), True),
     StructField('dt_quarter', IntegerType(), True),
-    StructField('processed_at', DateType(), True),
+    StructField('cat_type_dre', IntegerType(), True),
     StructField('amt_sales_revenue', FloatType(), True),
     StructField('amt_cost_goods_and_services', FloatType(), True),
     StructField('amt_groos_revenue', FloatType(), True),
@@ -321,7 +320,7 @@ schema_pp_dfc = StructType([
 ])
 
 
-varlist_financial_information_analytical = ['id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_refer', 'dt_year', 'dt_quarter', 'dt_fim_exerc',
+varlist_financial_information_analytical = ['id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_year', 'dt_quarter', 'dt_fim_exerc',
     'amt_sales_revenue', 'amt_cost_goods_and_services', 'amt_groos_revenue', 'amt_operating_revenues_and_expenses',
     'amt_selling_expenses', 'amt_general_administrative_expenses', 'amt_losses_non_recoverability_of_assets', 
     'amt_other_operating_income', 'amt_other_operating_expenses', 'amt_equity_equivalence', 'amt_earnings_before_interest_and_taxes',
