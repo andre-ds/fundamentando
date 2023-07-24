@@ -49,6 +49,7 @@ with DAG(
     pp_cvm_dfp_dre = pre_processing_cvm(dataType='dfp_dre', execution_date=EXECUTION_DATE)
     pp_cvm_dfp_bpa = pre_processing_cvm(dataType='dfp_bpa', execution_date=EXECUTION_DATE)
     pp_cvm_dfp_bpp = pre_processing_cvm(dataType='dfp_bpp', execution_date=EXECUTION_DATE)
+    pp_cvm_dfp_dfc = pre_processing_cvm(dataType='dfp_dfc', execution_date=EXECUTION_DATE)
 
     upload_s3_p = PythonOperator(
         task_id='upload_s3_pp_dfp',
@@ -61,6 +62,4 @@ with DAG(
         }
     )
 
-
-environment >> ext_cvm_dfp >> upload_s3_r >> unzip_cvm >> [
-    pp_cvm_dfp_dre, pp_cvm_dfp_bpa, pp_cvm_dfp_bpp] >> upload_s3_p
+environment >> ext_cvm_dfp >> upload_s3_r >> unzip_cvm >> [pp_cvm_dfp_dre, pp_cvm_dfp_bpa, pp_cvm_dfp_bpp, pp_cvm_dfp_dfc] >> upload_s3_p

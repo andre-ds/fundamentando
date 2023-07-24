@@ -34,6 +34,8 @@ if __name__ == "__main__":
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_bp_ba, execution_date=extract_at)
     elif args.dataType == 'dfp_bpa':
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_bp_ba, execution_date=extract_at)
+    elif args.dataType == 'dfp_dfc':
+        pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre, execution_date=extract_at)
     elif args.dataType == 'itr_dre':
         pp.pre_process_cvm(dataType=args.dataType, year=args.years_list, schema=schema_dre, execution_date=extract_at)
     elif args.dataType == 'itr_bpp':
