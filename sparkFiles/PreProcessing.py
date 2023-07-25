@@ -76,6 +76,9 @@ class PreProcessing():
 
     def _union_quarters(self, dataset_itr:DataFrame, dataset_dfp:DataFrame) -> DataFrame:
 
+        '''
+        Em desuso
+        '''
         # Agregations Q1, Q2 and Q3
         df_sum = dataset_itr.groupBy(['processed_at', 'id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year']).agg(
             lit(None).alias('dt_refer'),
@@ -118,6 +121,68 @@ class PreProcessing():
         dataset = dataset_itr.union(dataset_q4.select(dataset_itr.columns))
 
         return dataset
+    
+
+    def _get_last_quarter(self, df_itr, df_dfp):
+
+        # All Quarters Union
+        df_itr = df_itr.drop('processed_at')
+        agg_varlist = df_itr.columns[9:]
+        agg_funcs_1 = [f.sum(x).alias(f"{x}") for x in agg_varlist]
+        df_sum_quarters = (
+            df_itr
+            .drop('dt_quarter', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc')
+            .groupBy('id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'cat_type_dre')
+            .agg(*agg_funcs_1)
+            .withColumn('dt_quarter', f.lit(None))
+            .withColumn('dt_refer', f.lit(None))
+            .withColumn('dt_ini_exerc', f.lit(None))
+            .withColumn('dt_fim_exerc', f.lit(None))
+        )
+        select_varlist = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre']
+        select_varlist.extend(agg_varlist)
+
+        df_sum_quarters = (
+            df_sum_quarters
+            .select(select_varlist)
+        )
+        # Informations Negativations
+        for v in df_sum_quarters.columns[9:]:
+            df_sum_quarters = df_sum_quarters.withColumn(v, -f.col(v))
+
+        # Calculating Last Quarter Dataset
+        df_quarter = (
+            df_dfp
+            .union(df_sum_quarters.select(df_dfp.columns))
+            .drop('dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_quarter')
+        )
+
+        agg_func_2 = [f.sum(x).alias(f"{x}") for x in df_quarter.columns[5:]]
+        df_quarter = (
+            df_quarter
+            .groupBy('id_cvm', 'id_cnpj', 'txt_company_name', 'cat_type_dre', 'dt_year')
+            .agg(*agg_func_2)
+        )
+        # Briging Dates
+        df_iden = (
+            df_dfp
+            .select('id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre')
+        )
+        df_quarter = (
+            df_quarter
+            .join(df_iden, how='left', on=['id_cvm', 'id_cnpj', 'txt_company_name', 'cat_type_dre', 'dt_year'])
+            .withColumn('teste', f.add_months(f.col('dt_fim_exerc'), -2))
+        )
+
+        # Complete Dataset
+        dataset = (
+            df_itr
+            .union(df_quarter.select(df_itr.columns))
+            .orderBy('id_cnpj', 'dt_year', 'dt_quarter')
+        )
+
+        return dataset
+        
 
     def _pre_processing_fca_valor_mobiliario(self, dataset):
 
@@ -989,8 +1054,10 @@ class PreProcessing():
                         dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                         dataset = self._pre_processing_dre(dataset = dataset, type='dfp_dre')
                     elif dataType == 'itr_dre':
-                        dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                        dataset = self._pre_processing_dre(dataset = dataset, type='itr_dre')
+                        dataset_itr = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                        dataset_dfp = self.spark_environment.read.csv(os.path.join(DIR_PATH_PROCESSED_DFP, f'pp_dfp_dre_{file[-8:-4]}.parquet'), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                        dataset = self._pre_processing_dre(dataset = dataset_itr, type='itr_dre')
+                        dataset = self._get_last_quarter(df_itr=dataset, df_dfp=dataset_dfp)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     if dataType == 'dfp_dre':
                         _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
