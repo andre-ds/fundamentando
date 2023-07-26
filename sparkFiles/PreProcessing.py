@@ -126,7 +126,7 @@ class PreProcessing():
     def _get_last_quarter(self, df_itr, df_dfp):
 
         # All Quarters Union
-        df_itr = df_itr.drop('processed_at')
+        df_dfp = df_dfp.drop('processed_at')
         agg_varlist = df_itr.columns[9:]
         agg_funcs_1 = [f.sum(x).alias(f"{x}") for x in agg_varlist]
         df_sum_quarters = (
@@ -1055,8 +1055,12 @@ class PreProcessing():
                         dataset = self._pre_processing_dre(dataset = dataset, type='dfp_dre')
                     elif dataType == 'itr_dre':
                         dataset_itr = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                        dataset_dfp = self.spark_environment.read.csv(os.path.join(DIR_PATH_PROCESSED_DFP, f'pp_dfp_dre_{file[-8:-4]}.parquet'), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
+                        dataset_dfp = self.spark_environment.read.parquet(os.path.join(DIR_PATH_PROCESSED_DFP, f'pp_dfp_dre_{file[-8:-4]}.parquet'))
+                        print('base de dados dfp')
+                        dataset_dfp.show()
                         dataset = self._pre_processing_dre(dataset = dataset_itr, type='itr_dre')
+                        print('itr_pre_processado')
+                        dataset.show()
                         dataset = self._get_last_quarter(df_itr=dataset, df_dfp=dataset_dfp)
                     dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     if dataType == 'dfp_dre':
