@@ -75,58 +75,10 @@ def pp_financial_union(type_file):
         .select(varlist_financial_information_analytical)
         )
 
-        
+    '''
+    Fazer condição p/ o tipo de empresa
+    '''
     print('teste-4')
-    if type_file=='itr_all':
-        fileFPD = 'analytical_FPD_financial_information.parquet'
-        dataset_fpd = sk.read.parquet(os.path.join(DIR_PATH_ANALYTICAL, fileFPD)).drop('processed_at')
-        # All Quarters Union
-        agg_funcs_1 = [f.sum(x).alias(f"{x}") for x in dataset.columns[9:]]
-        df_sum = (
-            dataset
-            .drop('dt_quarter', 'dt_refer', 'dt_fim_exerc')
-            .groupBy('id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'cat_type_dre', 'dt_year')
-            .agg(*agg_funcs_1)
-            .withColumn('dt_quarter', f.lit(None))
-            .withColumn('dt_refer', f.lit(None))
-            .withColumn('dt_fim_exerc', f.lit(None))
-        )
-        print('teste-5')
-        for v in df_sum.columns[6:]:
-            df_sum = df_sum.withColumn(v, -f.col(v))
-
-        # Calculating Last Quarter Dataset
-        df_quarter = (
-            dataset_fpd
-            .union(df_sum.select(dataset_fpd.columns))
-            .drop('dt_quarter', 'dt_refer', 'dt_fim_exerc')
-        )
-        print('teste-6')
-        agg_func_2 = [f.sum(x).alias(f"{x}") for x in df_quarter.columns[6:]]
-        df_quarter = (
-            df_quarter
-            .groupBy('id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'dt_year')
-            .agg(*agg_func_2)
-        )
-
-        df_ident = (
-            dataset_fpd
-            .select('id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'dt_refer', 'dt_year', 'dt_quarter', 'dt_fim_exerc')
-            .dropDuplicates()
-        )
-
-        df_quarter = (
-            df_ident
-            .join(df_quarter, on=['id_cvm', 'id_cnpj', 'id_ticker', 'txt_company_name', 'dt_year'], how='left')
-        )
-
-        # Complete Dataset
-        dataset = (
-            dataset
-            .union(df_quarter.select(dataset.columns))
-            .orderBy('id_cnpj', 'dt_year', 'dt_quarter')
-        )
-
     dataset = (
         dataset
         .withColumn('ebit_amplo', f.col('amt_earnings_before_income_tax_and_social_contribution')+f.abs(f.col('amt_financial_expenses')))
