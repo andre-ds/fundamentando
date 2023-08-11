@@ -125,12 +125,30 @@ class PreProcessing():
 
     def _get_last_quarter(self, df_itr, df_dfp):
 
-        # All Quarters Union
+        df_itr = df_itr.drop('processed_at')
         df_dfp = df_dfp.drop('processed_at')
-        agg_varlist = df_itr.columns[9:]
+
+        id_varlist = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year'] 
+        left_itr = (
+            df_itr
+            .groupBy(id_varlist)
+            .count()
+            .filter(f.col('count')==3)
+            .select('id_cvm')
+            .join(df_dfp.select('id_cvm').dropDuplicates(), on='id_cvm', how='inner')
+            .dropDuplicates()
+        )
+
+        # All Quarters Union
+        drop_list = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre']
+        agg_varlist = df_itr.columns
+        for i in drop_list:
+            if i in agg_varlist:
+                agg_varlist.remove(i)
         agg_funcs_1 = [f.sum(x).alias(f"{x}") for x in agg_varlist]
         df_sum_quarters = (
-            df_itr
+            left_itr
+            .join(df_itr, on='id_cvm', how='left')
             .drop('dt_quarter', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc')
             .groupBy('id_cvm', 'id_cnpj', 'txt_company_name', 'dt_year', 'cat_type_dre')
             .agg(*agg_funcs_1)
@@ -141,28 +159,28 @@ class PreProcessing():
         )
         select_varlist = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre']
         select_varlist.extend(agg_varlist)
-
         df_sum_quarters = (
             df_sum_quarters
             .select(select_varlist)
         )
-        # Informations Negativations
-        for v in df_sum_quarters.columns[9:]:
-            df_sum_quarters = df_sum_quarters.withColumn(v, -f.col(v))
 
+        # Negativations Informations
+        for v in df_sum_quarters.columns[len(drop_list):]:
+            df_sum_quarters = df_sum_quarters.withColumn(v, -f.col(v))
         # Calculating Last Quarter Dataset
         df_quarter = (
-            df_dfp
+            left_itr
+            .join(df_dfp, on='id_cvm', how='left')
             .union(df_sum_quarters.select(df_dfp.columns))
             .drop('dt_refer', 'dt_ini_exerc', 'dt_fim_exerc', 'dt_quarter')
         )
-
         agg_func_2 = [f.sum(x).alias(f"{x}") for x in df_quarter.columns[5:]]
         df_quarter = (
             df_quarter
             .groupBy('id_cvm', 'id_cnpj', 'txt_company_name', 'cat_type_dre', 'dt_year')
             .agg(*agg_func_2)
         )
+
         # Briging Dates
         df_iden = (
             df_dfp
@@ -173,14 +191,13 @@ class PreProcessing():
             .join(df_iden, how='left', on=['id_cvm', 'id_cnpj', 'txt_company_name', 'cat_type_dre', 'dt_year'])
             .withColumn('teste', f.add_months(f.col('dt_fim_exerc'), -2))
         )
-
         # Complete Dataset
         dataset = (
             df_itr
             .union(df_quarter.select(df_itr.columns))
             .orderBy('id_cnpj', 'dt_year', 'dt_quarter')
         )
-
+        
         return dataset
         
 
@@ -384,8 +401,7 @@ class PreProcessing():
                 dataset
                 .filter(f.col('dt_months_exercise') == 3)
             )
-        print('test 1')
-        dataset.show()
+
         ## Pre-processing account type
         remove_accent_udf = f.udf(remove_accent, StringType())
         dataset = (
@@ -509,16 +525,14 @@ class PreProcessing():
             .withColumn('amt_income_tax_social_contribution_on_profit', f.when((f.col('ds_conta').rlike('^impostorendacontribuicao_social_sobre_o_lucro$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_income_tax_social_contribution_on_profit')))
             .withColumn('amt_net_profit', f.when((f.col('ds_conta').rlike('lucroprejuizo_consolidadoperiodo'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
         )
-        print('test 2')
-        dataset.show()
+        
         # Rename all variables to upercase
         variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
         # Standardizing id_cnpj
         dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
-        print('test 3')
-        dataset.show()
+
         dataset = (
             dataset
             .groupBy(varlist_dre[0:9])
@@ -1051,20 +1065,22 @@ class PreProcessing():
                     if dataType == 'dfp_dre':
                         dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                         dataset = self._pre_processing_dre(dataset = dataset, type='dfp_dre')
+                        dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     elif dataType == 'itr_dre':
                         dataset_itr = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                         dataset_dfp = self.spark_environment.read.parquet(os.path.join(DIR_PATH_PROCESSED_DFP, f'pp_dfp_dre_{file[-8:-4]}.parquet'))
                         print('base de dados dfp')
-                        dataset_dfp.show()
                         dataset = self._pre_processing_dre(dataset = dataset_itr, type='itr_dre')
                         print('itr_pre_processado')
-                        dataset.show()
-                        dataset = self._get_last_quarter(df_itr=dataset, df_dfp=dataset_dfp)
-                    dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                        dataset_complete = self._get_last_quarter(df_itr=dataset, df_dfp=dataset_dfp)
+                        dataset_complete = _processed_date(dataset=dataset_complete, execution_date=execution_date)
+                        dataset = _processed_date(dataset=dataset, execution_date=execution_date)
                     if dataType == 'dfp_dre':
                         _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
                     elif dataType == 'itr_dre':
                         _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
+                        complete_dataType = 'itr_dre_complete'
+                        _saving_pre_processing(dataset=dataset_complete, dataType=complete_dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                 elif (dataType == 'dfp_bpp') or (dataType == 'itr_bpp'):
                     if dataType == 'dfp_bpp':
                         dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)

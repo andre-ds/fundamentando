@@ -71,6 +71,8 @@ def path_environment(ti):
         os.mkdir(os.path.join(PATH_DATALAKE, 'pre-processed-stock'))
     if 'analytical' not in list_folders:
         os.mkdir(os.path.join(PATH_DATALAKE, 'analytical'))
+    if 'monitoring' not in list_folders:
+        os.mkdir(os.path.join(PATH_DATALAKE, 'monitoring'))
 
     DIR_PATH_RAW_STOCK = os.path.join(PATH_DATALAKE, 'raw-stock')
     DIR_PATH_RAW_FCA = os.path.join(PATH_DATALAKE, 'raw-fca')
@@ -83,7 +85,8 @@ def path_environment(ti):
     DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
     DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
 
-    DIR_PATH_ANALYTICAL= os.path.join(PATH_DATALAKE, 'analytical')
+    DIR_PATH_ANALYTICAL = os.path.join(PATH_DATALAKE, 'analytical')
+    DIR_PATH_MONITORING = os.path.join(PATH_DATALAKE, 'monitoring')
 
     ti.xcom_push(key='DIR_PATH', value=DIR_PATH)
     # Raw folders
@@ -98,7 +101,9 @@ def path_environment(ti):
     ti.xcom_push(key='DIR_PATH_PROCESSED_ITR', value=DIR_PATH_PROCESSED_ITR)
     ti.xcom_push(key='DIR_PATH_PROCESSED_STOCK', value=DIR_PATH_PROCESSED_STOCK)
     # Analytical
-    ti.xcom_push(key='DIR_PATH_ANALYTICAL', value=DIR_PATH_ANALYTICAL)    
+    ti.xcom_push(key='DIR_PATH_ANALYTICAL', value=DIR_PATH_ANALYTICAL)  
+    # Monitoring
+    ti.xcom_push(key='DIR_PATH_MONITORING', value=DIR_PATH_MONITORING)  
 
 
 def unzippded_files(ti, dataType):

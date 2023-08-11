@@ -13,6 +13,7 @@ DIR_PATH_PROCESSED_DFP = os.path.join(PATH_DATALAKE, 'pre-processed-dfp')
 DIR_PATH_PROCESSED_ITR = os.path.join(PATH_DATALAKE, 'pre-processed-itr')
 DIR_PATH_PROCESSED_STOCK = os.path.join(PATH_DATALAKE, 'pre-processed-stock')
 DIR_PATH_ANALYTICAL = os.path.join(PATH_DATALAKE, 'analytical')
+DIR_PATH_MONITORING = os.path.join(PATH_DATALAKE, 'monitoring')
 
 DIR_S3_RAW_DFP = 's3://fundamentus-raw-dfp'
 DIR_S3_RAW_ITR = 's3://fundamentus-raw-itr'
@@ -20,7 +21,7 @@ DIR_S3_PRE_PROCESSED_ITR = 's3://fundamentus-pre-processed-itr'
 DIR_S3_PRE_PROCESSED_DFP = 's3://fundamentus-pre-processed-dfp'
 DIR_S3_PROCESSED_STOCKS = 's3://fundamentus-pre-processed-stock'
 DIR_S3_ANALYTICAL = 's3://fundamentus-analytical'
-
+DIR_S3_MONITORING = 's3://fundamentus-monitoring'
 
 types_dict = {
             'itr_dre':'itr_cia_aberta_DRE_con',
@@ -88,6 +89,51 @@ varlist_bpa = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_fim_exer
                 'amt_total_assets', 'amt_current_assets', 'amt_cash_and_cash_equivalents', 'amt_non_current_assets', 'amt_finantial_assets', 'amt_investments',
                 'amt_immobilized', 'amt_intangible']
 
+variables_type_1 = [
+    'amt_sales_revenue',
+    'amt_cost_goods_and_services',
+    'amt_groos_revenue',
+    'amt_operating_revenues_and_expenses',
+    'amt_selling_expenses',
+    'amt_general_administrative_expenses',
+    'amt_losses_non_recoverability_of_assets',
+    'amt_other_operating_income',
+    'amt_other_operating_expenses',
+    'amt_equity_equivalence',
+    'amt_earnings_before_interest_and_taxes',
+    'amt_financial_results',
+    'amt_financial_income',
+    'amt_financial_expenses',
+    'amt_earnings_before_income_tax_and_social_contribution',
+    'amt_income_tax_social_contribution_on_profit',
+    'amt_net_profit']
+
+variables_type_2 = [
+    'amt_financial_intermediation_income',
+    'amt_financial_intermediation_expenses',
+    'amt_operating_revenues_and_expenses',
+    'amt_gross_income_financial_intermediation',
+    'amt_provision_for_expected_loss_expense_credit_risk',
+    'amt_income_from_service_provision',
+    'amt_other_administrative_expenses',
+    'amt_other_operating_income',
+    'amt_other_operational_expenses',
+    'amt_equity_equivalence',
+    'amt_earnings_before_income_tax_and_social_contribution',
+    'amt_income_tax_social_contribution_on_profit',
+    'amt_net_profit'
+]
+
+variables_type_3 = [
+    'amt_sales_revenue',
+    'amt_cost_goods_and_services',
+    'amt_other_administrative_expenses',
+    'amt_equity_equivalence',
+    'amt_earnings_before_interest_and_taxes',
+    'amt_earnings_before_income_tax_and_social_contribution',
+    'amt_income_tax_social_contribution_on_profit',
+    'amt_net_profit'
+]
 
 schema_dre = StructType([
     StructField('CNPJ_CIA', StringType(), True),
