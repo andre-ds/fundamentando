@@ -172,6 +172,7 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
     def __load_pp(DIR_PATH, dataType, delete):
 
         folder_list = [file for file in os.listdir(DIR_PATH) if re.findall(dataType, file)]
+        print(folder_list)
 
         for folder in folder_list:
             if delete:
@@ -271,6 +272,11 @@ def load_bucket(ti, bucket, dataType, execution_date, delete=None):
     elif dataType == 'analytical-financial-dfc-mi-fpd':
         DIR_PATH = ti.xcom_pull(key='DIR_PATH_ANALYTICAL', task_ids='path_environment')
         dataType = f'analytical_dfp_DFC_MI.parquet'
+        __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
+
+    elif dataType == 'monitoring-dre':
+        DIR_PATH = ti.xcom_pull(key='DIR_PATH_MONITORING', task_ids='path_environment')
+        dataType = 'monitoring'
         __load_pp(DIR_PATH=DIR_PATH, dataType=dataType, delete=delete)
 
 

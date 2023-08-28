@@ -487,20 +487,18 @@ class PreProcessing():
                 f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04')), f.col('vl_conta')).otherwise(f.col('amt_operating_revenues_and_expenses')))
             .withColumn('amt_gross_income_financial_intermediation',
                 f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.03')), f.col('vl_conta')))
-            .withColumn('amt_provision_for_expected_loss_expense_credit_risk',
-                f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.01')), f.col('vl_conta')))
-            .withColumn('amt_income_from_service_provision',
-                f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.02')), f.col('vl_conta')))
-            .withColumn('amt_other_administrative_expenses',
-                f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.08')), f.col('vl_conta')))
-            .withColumn('amt_other_operating_income',
-                f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.06')), f.col('vl_conta')).otherwise(f.col('amt_other_operating_income')))
-            #.withColumn('amt_tax_expenses',
-            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.05')), f.col('vl_conta')))
-            .withColumn('amt_other_operational_expenses',
-                f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.07')), f.col('vl_conta')))
-            .withColumn('amt_equity_equivalence',
-                f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.08')), f.col('vl_conta')).otherwise(f.col('amt_equity_equivalence')))
+            #.withColumn('amt_provision_for_expected_loss_expense_credit_risk',
+            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.01')), f.col('vl_conta')))
+            #.withColumn('amt_income_from_service_provision',
+            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.02')), f.col('vl_conta')))
+            #.withColumn('amt_other_administrative_expenses',
+            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.04')), f.col('vl_conta')))
+            #.withColumn('amt_other_operating_income',
+            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.06')), f.col('vl_conta')).otherwise(f.col('amt_other_operating_income')))
+            #.withColumn('amt_other_operational_expenses',
+            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.07')), f.col('vl_conta')))
+            #.withColumn('amt_equity_equivalence',
+            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.08')), f.col('vl_conta')).otherwise(f.col('amt_equity_equivalence')))
             #.withColumn('amt_staff_costs',
             #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.04.03')), f.col('vl_conta')))
             .withColumn('amt_earnings_before_income_tax_and_social_contribution',
@@ -508,17 +506,22 @@ class PreProcessing():
             .withColumn('amt_income_tax_social_contribution_on_profit',
                 f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.06')), f.col('vl_conta')).otherwise(f.col('amt_income_tax_social_contribution_on_profit')))
             .withColumn('amt_net_profit',
-                f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.11')), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
+                f.when(((f.col('type_dre')=='type_02')&((f.col('cd_conta')=='3.11')&(f.col('ds_conta')=='lucroprejuizo_consolidadoperiodo'))), f.col('vl_conta'))
+                 .when(((f.col('type_dre')=='type_02')&((f.col('cd_conta')!='3.11')&(f.col('ds_conta')=='lucroprejuizo_consolidadoperiodo'))), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
+            #.withColumn('amt_net_profit',
+            #    f.when(((f.col('type_dre')=='type_02')&(f.col('cd_conta')=='3.11')), f.col('vl_conta')).otherwise(f.col('amt_net_profit')))
         )
 
         # type_03
         dataset = (
             dataset
-            .withColumn('amt_sales_revenue', f.when((f.col('ds_conta').rlike('outras_receitasdespesas_operacionais|^receitasoperacoes$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_sales_revenue')))
+            .withColumn('amt_sales_revenue', f.when((f.col('ds_conta').rlike('^receitasoperacoes$'))&(f.col('vl_conta')!=0)&(f.col('type_dre')=='type_03'), f.col('vl_conta'))
+                .when((f.col('ds_conta').rlike('^outras_receitasdespesas_operacionais$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_sales_revenue')))
+            #.withColumn('amt_sales_revenue', f.when((f.col('ds_conta').rlike('outras_receitasdespesas_operacionais|^receitasoperacoes$'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_sales_revenue')))
             .withColumn('amt_cost_goods_and_services', f.when((f.col('ds_conta').rlike('custoservicos_prestados'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_cost_goods_and_services')))
             #.withColumn('amt_staff_costs',
             #    f.when(((f.col('type_dre')=='type_03')&(f.col('cd_conta')=='3.05.03')), f.col('vl_conta')))
-            .withColumn('amt_other_administrative_expenses', f.when((f.col('cd_conta')=='3.05')&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_other_administrative_expenses')))
+            #.withColumn('amt_other_administrative_expenses', f.when((f.col('cd_conta')=='3.05')&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_other_administrative_expenses')))
             .withColumn('amt_equity_equivalence', f.when((f.col('cd_conta')=='3.06'), f.col('vl_conta')).otherwise(f.col('amt_equity_equivalence')))
             .withColumn('amt_earnings_before_interest_and_taxes', f.when((f.col('ds_conta').rlike('resultado_antesresultado_financeirodos_tributos'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_earnings_before_interest_and_taxes')))
             .withColumn('amt_earnings_before_income_tax_and_social_contribution', f.when((f.col('ds_conta').rlike('resultado_antestributos_sobre_o_lucro'))&(f.col('type_dre')=='type_03'), f.col('vl_conta')).otherwise(f.col('amt_earnings_before_income_tax_and_social_contribution')))
@@ -530,8 +533,14 @@ class PreProcessing():
         variablesRename = [['cd_cvm', 'id_cvm'], ['cnpj_cia', 'id_cnpj'], ['codigo_cvm', 'id_cvm'], ['denom_cia','txt_company_name']]
         for v in variablesRename:
             dataset = dataset.withColumnRenamed(v[0], v[1])
+        
         # Standardizing id_cnpj
         dataset = dataset.withColumn('id_cnpj', f.regexp_replace(f.col('id_cnpj'), '[./-]', ''))
+
+        # Genereting Copy
+        #dataset_ds_conta = dataset
+        dataset_ds_conta = dataset
+        dataset_ds_conta = dataset_ds_conta.withColumnRenamed('type_dre', 'cat_type_dre')
 
         dataset = (
             dataset
@@ -542,7 +551,7 @@ class PreProcessing():
             .withColumnRenamed('type_dre', 'cat_type_dre')
         )
 
-        return dataset
+        return dataset, dataset_ds_conta
 
 
     def _pre_processing_bpa(self, dataset:DataFrame) -> DataFrame:
@@ -1064,23 +1073,27 @@ class PreProcessing():
                 elif (dataType == 'dfp_dre') or (dataType == 'itr_dre'):
                     if dataType == 'dfp_dre':
                         dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
-                        dataset = self._pre_processing_dre(dataset = dataset, type='dfp_dre')
+                        dataset, dataset_ds_conta = self._pre_processing_dre(dataset = dataset, type='dfp_dre')
                         dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                        dataset_ds_conta = _processed_date(dataset=dataset_ds_conta, execution_date=execution_date)
                     elif dataType == 'itr_dre':
                         dataset_itr = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_ITR, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)
                         dataset_dfp = self.spark_environment.read.parquet(os.path.join(DIR_PATH_PROCESSED_DFP, f'pp_dfp_dre_{file[-8:-4]}.parquet'))
-                        print('base de dados dfp')
-                        dataset = self._pre_processing_dre(dataset = dataset_itr, type='itr_dre')
-                        print('itr_pre_processado')
+                        dataset, dataset_ds_conta = self._pre_processing_dre(dataset = dataset_itr, type='itr_dre')
                         dataset_complete = self._get_last_quarter(df_itr=dataset, df_dfp=dataset_dfp)
                         dataset_complete = _processed_date(dataset=dataset_complete, execution_date=execution_date)
                         dataset = _processed_date(dataset=dataset, execution_date=execution_date)
+                        dataset_ds_conta = _processed_date(dataset=dataset_ds_conta, execution_date=execution_date)
                     if dataType == 'dfp_dre':
                         _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_DFP)
+                        dataType_ds_conta = 'dfp_dre_ds_conta'
+                        _saving_pre_processing(dataset=dataset_ds_conta, dataType=dataType_ds_conta, file=file, path=DIR_PATH_PROCESSED_DFP)
                     elif dataType == 'itr_dre':
                         _saving_pre_processing(dataset=dataset, dataType=dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                         complete_dataType = 'itr_dre_complete'
                         _saving_pre_processing(dataset=dataset_complete, dataType=complete_dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
+                        complete_dataType = 'itr_dre_ds_conta'
+                        _saving_pre_processing(dataset=dataset_ds_conta, dataType=complete_dataType, file=file, path=DIR_PATH_PROCESSED_ITR)
                 elif (dataType == 'dfp_bpp') or (dataType == 'itr_bpp'):
                     if dataType == 'dfp_bpp':
                         dataset = self.spark_environment.read.csv(os.path.join(DIR_PATH_RAW_DFP, file), header = True, sep=';', encoding='ISO-8859-1', schema=schema)

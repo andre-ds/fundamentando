@@ -76,9 +76,7 @@ varlist_dre = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_ini_exer
                 'amt_general_administrative_expenses', 'amt_losses_non_recoverability_of_assets', 'amt_other_operating_income', 'amt_other_operating_expenses',
                 'amt_equity_equivalence', 'amt_earnings_before_interest_and_taxes', 'amt_financial_results', 'amt_financial_income', 'amt_financial_expenses',
                 'amt_earnings_before_income_tax_and_social_contribution', 'amt_income_tax_social_contribution_on_profit', 'amt_net_profit',
-                'amt_financial_intermediation_income', 'amt_financial_intermediation_expenses', 'amt_gross_income_financial_intermediation',
-                'amt_provision_for_expected_loss_expense_credit_risk', 'amt_income_from_service_provision', 'amt_other_administrative_expenses',
-                'amt_other_operational_expenses']
+                'amt_financial_intermediation_income', 'amt_financial_intermediation_expenses', 'amt_gross_income_financial_intermediation']
 
 
 varlist_bpp = ['id_cvm', 'id_cnpj', 'txt_company_name', 'dt_refer', 'dt_fim_exerc', 'dt_year', 'dt_quarter', 'cat_type_dre',
@@ -113,11 +111,11 @@ variables_type_2 = [
     'amt_financial_intermediation_expenses',
     'amt_operating_revenues_and_expenses',
     'amt_gross_income_financial_intermediation',
-    'amt_provision_for_expected_loss_expense_credit_risk',
-    'amt_income_from_service_provision',
-    'amt_other_administrative_expenses',
+#    'amt_provision_for_expected_loss_expense_credit_risk',
+#    'amt_income_from_service_provision',
+#    'amt_other_administrative_expenses',
     'amt_other_operating_income',
-    'amt_other_operational_expenses',
+#    'amt_other_operational_expenses',
     'amt_equity_equivalence',
     'amt_earnings_before_income_tax_and_social_contribution',
     'amt_income_tax_social_contribution_on_profit',
@@ -127,13 +125,24 @@ variables_type_2 = [
 variables_type_3 = [
     'amt_sales_revenue',
     'amt_cost_goods_and_services',
-    'amt_other_administrative_expenses',
+#    'amt_other_administrative_expenses',
     'amt_equity_equivalence',
     'amt_earnings_before_interest_and_taxes',
     'amt_earnings_before_income_tax_and_social_contribution',
     'amt_income_tax_social_contribution_on_profit',
     'amt_net_profit'
 ]
+
+monitoring_variable_type_01 = ['3.01', '3.02', '3.03', '3.04', '3.05', '3.06', '3.07',
+                               '3.08', '3.11', '3.04.01', '3.04.02','3.04.03', '3.04.04',
+                               '3.04.05', '3.04.06', '3.06.01', '3.06.02']
+
+monitoring_variable_type_02 = ['3.01', '3.02', '3.03', '3.04', '3.05', '3.06', '3.11']
+
+monitoring_variable_type_03 = ['outras_receitasdespesas_operacionais', '^receitasoperacoes$', 'custoservicos_prestados',
+           'resultado_antesresultado_financeirodos_tributos', 'resultado_antestributos_sobre_o_lucro',
+           '^impostorendacontribuicao_social_sobre_o_lucro$', 
+           'lucroprejuizo_consolidadoperiodo', '3.05', '3.06']
 
 schema_dre = StructType([
     StructField('CNPJ_CIA', StringType(), True),
